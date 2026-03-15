@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Goofy Knight and the Silly Princess</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:#2C1A0E;}
+#app{display:flex;flex-direction:column;width:100%;height:100%;background:#2C1A0E;}
+#story-title{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #4A2E10;flex-shrink:0;}
+#title-text{font-family:Georgia,serif;font-style:italic;font-size:15px;color:#F0D8A8;letter-spacing:0.08em;flex:1;text-align:center;}
+#next-chapter-btn{font-family:Georgia,serif;font-size:12px;background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#next-chapter-btn:hover{background:#5A3A18;}
+#main{display:flex;flex-direction:row;flex:1;min-height:0;}
+#left{flex:0 0 62%;display:flex;flex-direction:column;border-right:1px solid #4A2E10;min-width:0;}
+#canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#1E1008;min-height:0;overflow:hidden;}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
+#scene-bar{padding:7px 14px;background:#3A1F08;border-top:1px solid #4A2E10;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+#scene-name{font-family:Georgia,serif;font-size:12px;color:#E8C890;font-style:italic;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#nav-btns{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.nbtn{background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;font-family:Georgia,serif;font-size:12px;padding:4px 12px;cursor:pointer;}
+.nbtn:hover{background:#5A3A18;}
+.nbtn:disabled{opacity:0.3;cursor:default;}
+#dots-row{display:flex;gap:4px;}
+.dot{width:5px;height:5px;border-radius:50%;background:#6A4520;}
+.dot.on{background:#E8C890;}
+#right{flex:1;display:flex;flex-direction:column;background:#F5EDD6;overflow:hidden;min-width:0;}
+#text-header{padding:12px 16px 10px;border-bottom:1px solid #D4C0A0;flex-shrink:0;}
+#text-chapter-label{font-family:Georgia,serif;font-size:11px;font-style:italic;color:#8B5E2A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+#text-chapter-title{font-family:Georgia,serif;font-size:13px;font-style:italic;color:#5A3010;font-weight:bold;}
+#story-scroll{flex:1;overflow-y:auto;padding:14px 16px;min-height:0;scrollbar-width:thin;scrollbar-color:#C8A860 #F5EDD6;}
+#story-scroll::-webkit-scrollbar{width:5px;}
+#story-scroll::-webkit-scrollbar-thumb{background:#C8A860;border-radius:3px;}
+#story-text p{font-family:Georgia,serif;font-size:14px;line-height:1.9;color:#3A2010;margin-bottom:0.9em;}
+#story-text p.hl{background:#FFF0B0;border-left:2px solid #C8A040;padding:2px 6px;border-radius:0 2px 2px 0;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="story-title">
+    <div style="flex:0 0 80px"></div>
+    <div id="title-text">The Goofy Knight and the Silly Princess</div>
+    <div style="flex:0 0 80px;display:flex;justify-content:flex-end;">
+      <button id="next-chapter-btn">Next chapter &rarr;</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="left">
+      <div id="canvas-wrap"><canvas id="c"></canvas></div>
+      <div id="scene-bar">
+        <div id="scene-name"></div>
+        <div id="nav-btns">
+          <button class="nbtn" id="prev">&#8592;</button>
+          <div id="dots-row"></div>
+          <button class="nbtn" id="next">&#8594;</button>
+        </div>
+      </div>
+    </div>
+    <div id="right">
+      <div id="text-header">
+        <div id="text-chapter-label">Chapter I</div>
+        <div id="text-chapter-title">In which a knight loses his trousers (almost)</div>
+      </div>
+      <div id="story-scroll"><div id="story-text"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+var W = 240, H = 150;
+canvas.width = W; canvas.height = H;
+
+function sizeCanvas(){
+  var wrap = document.getElementById('canvas-wrap');
+  var aw = wrap.clientWidth - 16;
+  var ah = wrap.clientHeight - 16;
+  var scale = Math.min(Math.floor(aw/W), Math.floor(ah/H));
+  if(scale < 1) scale = 1;
+  canvas.style.width = (W*scale)+'px';
+  canvas.style.height = (H*scale)+'px';
+}
+
+var C = {
+  skyNight:'#12101E', skyTheatre:'#1E0C04',
+  sunY:'#FFD060', moonC:'#FFF0C0', star:'#FFFACC',
+  cloudW:'#F8F0E0',
+  grassG:'#5CA840', grassD:'#3E8228', grassDk:'#2A5A18',
+  cobL:'#C8B898', cobD:'#A09070', cobLine:'#806040',
+  bCream:'#F0DFB8', bTan:'#DCC898', bDark:'#9A8050',
+  roofR:'#C03020', roofB:'#7A3800',
+  winY:'#FFE870', winO:'#FFB840',
+  doorB:'#7A4A28', wood:'#D4A860', woodD:'#8A6020',
+  kSilver:'#C8D0DC', kSilD:'#9AA2B0', kGold:'#D8B840',
+  kBlonde:'#F8C838', kBlondeD:'#D0980C',
+  kSkin:'#F8C8A0', kSkinS:'#E0A070',
+  kRed:'#C83020',
+  pHair:'#3A1800', pHairH:'#622808',
+  pSkin:'#FCCCA0', pSkinS:'#E8A870',
+  pPurp:'#7830C0', pPurpL:'#A060E0', pPurpD:'#501890',
+  pGold:'#D8A010',
+  trous:'#C8D4E0',
+  curtain:'#980010', stage:'#4A3020', seat:'#680010',
+  lpost:'#604818', lamp:'#FFE890'
+};
+
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function pt(x,y,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),1,1);}
+function circ(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function tri(x1,y1,x2,y2,x3,y3,c){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.fill();}
+function skyGrad(y0,y1,r0,g0,b0,r1,g1,b1){
+  for(var y=y0;y<y1;y++){
+    var t=(y-y0)/(y1-y0);
+    ctx.fillStyle='rgb('+Math.round(r0+(r1-r0)*t)+','+Math.round(g0+(g1-g0)*t)+','+Math.round(b0+(b1-b0)*t)+')';
+    ctx.fillRect(0,y,W,1);
+  }
+}
+function cobbles(x,y,w,h){
+  px(x,y,w,h,C.cobL);
+  for(var cy=y;cy<y+h;cy+=5){
+    var off=(Math.floor((cy-y)/5)%2===0)?0:4;
+    for(var cx=x+off;cx<x+w;cx+=9){
+      px(cx,cy,7,4,C.cobD);
+      px(cx,cy+4,7,1,C.cobLine);
+      px(cx+7,cy,1,4,C.cobLine);
+      px(cx+1,cy+1,2,1,C.cobL);
+    }
+  }
+}
+function winLit(x,y,w,h){
+  px(x,y,w,h,'#604010');
+  px(x+1,y+1,w-2,h-2,C.winY);
+  px(x+1,y+1,w-2,2,C.winO);
+  px(x+1,y+1,1,h-2,'#FFF8B0');
+  px(x+(w>>1),y,1,h,'#604010');
+  px(x,y+(h>>1),w,1,'#604010');
+}
+function lamp(x,y){
+  px(x,y,3,24,C.lpost);
+  px(x-4,y,11,4,C.lpost);
+  px(x-3,y+1,9,3,C.lamp);
+  circ(x+1,y-2,4,C.lamp);
+}
+function cloud(x,y){
+  circ(x,y,5,C.cloudW);circ(x+6,y-2,6,C.cloudW);circ(x+13,y,5,C.cloudW);
+  px(x-1,y,16,5,C.cloudW);
+}
+function building(x,y,w,h,wallCol,roofCol){
+  px(x,y+8,w,h-8,wallCol);
+  px(x,y+8,w,2,C.bDark);
+  tri(x-2,y+8,x+w/2,y,x+w+2,y+8,roofCol);
+}
+function knight(x,y){
+  px(x+3,y+21,6,4,C.kSilD);px(x+10,y+21,6,4,C.kSilD);
+  px(x+4,y+22,4,2,'#707880');px(x+11,y+22,4,2,'#707880');
+  px(x+3,y+14,6,8,C.kSilver);px(x+10,y+14,6,8,C.kSilver);
+  px(x+4,y+18,4,3,C.kGold);px(x+11,y+18,4,3,C.kGold);
+  px(x+2,y+20,3,2,C.kSilD);px(x+14,y+20,3,2,C.kSilD);
+  px(x+1,y+8,16,7,C.kSilver);
+  px(x+4,y+9,9,5,C.kSilD);
+  px(x+5,y+10,6,3,C.kGold);
+  px(x+6,y+11,4,1,C.winY);
+  px(x,y+8,3,7,C.kSilver);px(x+15,y+8,3,7,C.kSilver);
+  px(x,y+14,3,4,C.kSilD);px(x+15,y+14,3,4,C.kSilD);
+  px(x+6,y+6,6,3,C.kSkin);
+  px(x+3,y,12,7,C.kSilver);
+  px(x+4,y+1,10,5,C.kSilD);
+  px(x+4,y+3,10,3,C.kGold);
+  px(x+5,y+4,8,1,C.winY);
+  px(x+2,y+3,3,5,C.kBlonde);px(x+13,y+3,3,5,C.kBlonde);
+  px(x+2,y+2,2,2,C.kBlondeD);px(x+14,y+2,2,2,C.kBlondeD);
+  px(x+8,y-4,3,5,C.kRed);px(x+9,y-5,1,2,'#E05050');
+  pt(x+7,y+5,'#201008');pt(x+11,y+5,'#201008');
+}
+function princess(x,y){
+  px(x+2,y+16,14,9,C.pPurp);
+  px(x,y+19,18,7,C.pPurpD);
+  px(x+2,y+24,14,1,C.pGold);
+  px(x+1,y+22,2,3,C.pPurpD);px(x+15,y+22,2,3,C.pPurpD);
+  px(x+4,y+9,10,8,C.pPurp);
+  px(x+5,y+10,8,5,C.pPurpL);
+  px(x+2,y+10,3,6,C.pPurp);px(x+13,y+10,3,6,C.pPurp);
+  px(x+3,y+14,2,3,C.pSkin);px(x+13,y+14,2,3,C.pSkin);
+  px(x+6,y+6,6,5,C.pSkin);
+  px(x+4,y+2,10,6,C.pHair);
+  px(x+5,y+2,4,3,C.pHairH);
+  px(x+4,y+6,2,7,C.pHair);px(x+12,y+6,2,7,C.pHair);
+  px(x+5,y+1,8,2,C.pGold);
+  px(x+5,y,1,2,C.pGold);px(x+7,y-1,3,3,C.pGold);px(x+11,y,1,2,C.pGold);
+  pt(x+7,y+7,'#201008');pt(x+10,y+7,'#201008');
+  px(x+7,y+9,3,1,C.pSkinS);
+}
+
+function drawS0(){
+  skyGrad(0,80,244,192,122,168,203,232);
+  circ(200,22,14,C.sunY);circ(200,22,10,'#FFE840');
+  cloud(30,18);cloud(100,14);cloud(160,20);
+  px(150,20,25,28,'#A09888');
+  for(var t=0;t<3;t++){px(154+t*7,12,4,8,'#807868');}
+  px(155,8,5,5,'#706858');
+  px(154,10,1,8,'#E0E0D0');px(155,10,4,3,C.kRed);
+  px(0,80,W,70,C.grassDk);px(0,85,W,65,C.grassD);px(0,90,W,60,C.grassG);
+  cobbles(0,100,W,50);
+  building(4,38,44,60,C.bCream,C.roofB);
+  winLit(9,48,10,9);winLit(24,48,10,9);winLit(9,62,10,9);winLit(24,62,10,9);
+  px(8,92,6,8,C.doorB);
+  building(60,45,36,53,C.bTan,C.roofR);
+  winLit(65,55,9,8);winLit(78,55,9,8);
+  px(68,82,10,16,C.doorB);
+  building(148,42,52,56,C.bCream,C.roofB);
+  winLit(153,52,10,9);winLit(170,52,10,9);winLit(153,66,10,9);winLit(170,66,10,9);
+  lamp(56,78);lamp(128,78);
+  knight(100,92);
+}
+
+function drawS1(){
+  px(0,0,W,H,C.bCream);
+  px(0,0,W,9,'#C0A870');
+  for(var bx=0;bx<W;bx+=14){px(bx,108,13,42,C.wood);px(bx+13,108,1,42,C.woodD);}
+  for(var sy=0;sy<3;sy++){
+    px(6,20+sy*28,W-12,4,C.woodD);
+    for(var si=0;si<10;si++){
+      var sx2=8+si*22, sh=10+si%5;
+      px(sx2,16+sy*28-sh,10,sh,sy===1?C.trous:C.kSilver);
+      px(sx2+1,17+sy*28-sh,5,4,C.kSilD);
+      if(sy===0&&si%3===0){px(sx2+2,16+sy*28-sh+6,3,3,C.kRed);px(sx2+6,16+sy*28-sh+5,3,3,C.kRed);}
+    }
+  }
+  px(140,22,34,28,'#A8C8E0');
+  px(140,22,34,3,C.woodD);px(140,36,34,3,C.woodD);px(156,22,3,28,C.woodD);
+  px(40,85,120,5,C.woodD);px(38,90,124,8,C.wood);
+  px(95,60,14,30,C.bTan);px(96,54,12,9,'#705020');
+  px(95,50,14,6,C.kBlonde);
+  pt(99,56,'#201008');pt(103,56,'#201008');
+  knight(22,90);
+  px(37,74,14,16,C.trous);
+  px(38,75,6,7,C.kSilD);px(45,75,5,7,C.kSilD);
+  px(40,82,3,3,C.kRed);px(46,81,3,3,C.kRed);
+}
+
+function drawS2(){
+  px(0,0,W,H,'#F0D8A8');
+  px(0,0,W,9,'#B07838');
+  for(var fx=0;fx<W;fx+=13){px(fx,108,12,42,C.wood);px(fx+12,108,1,42,C.woodD);}
+  px(0,18,W,4,C.woodD);px(0,36,W,4,C.woodD);px(0,54,W,4,C.woodD);
+  var things=[['#C8C8C8',10,14],['#C07030',26,10],['#888898',42,13],['#C0A820',58,11],['#708090',74,13],['#8B4513',90,10],['#B8B0A0',106,14],['#D0A020',122,10],['#789090',138,13],['#D08040',154,10],['#C0C0C0',170,12],['#A03020',186,14]];
+  for(var i=0;i<things.length;i++){px(things[i][1],18-things[i][2],11,things[i][2],things[i][0]);}
+  px(148,54,80,4,C.woodD);
+  for(var gx=150;gx<225;gx+=12){px(gx,40,10,14,C.kSilver);px(gx+1,41,7,6,C.kSilD);}
+  px(0,72,52,5,C.woodD);px(0,77,52,10,C.wood);
+  px(13,108,6,5,C.kSilD);px(20,108,6,5,C.kSilD);
+  px(22,99,6,10,C.trous);px(14,99,6,10,C.kSilver);
+  px(10,82,20,14,C.kSilver);px(13,83,12,9,C.kSilD);px(14,84,9,5,C.kGold);
+  px(7,82,5,6,C.kSilver);px(7,87,5,4,C.kSilD);
+  px(28,80,5,6,C.kSilver);px(28,85,5,4,C.kSilD);
+  px(12,74,14,9,C.kSilver);px(13,75,12,7,C.kSilD);px(13,77,12,3,C.kGold);
+  px(10,76,4,4,C.kBlonde);px(24,76,4,4,C.kBlonde);
+  px(19,69,4,6,C.kRed);
+  px(26,95,11,14,C.trous);px(27,96,5,8,C.kSilD);
+  px(28,62,3,3,C.kGold);px(32,60,2,4,C.kGold);
+  princess(155,85);
+  px(165,97,5,3,C.pSkin);
+}
+
+function drawS3(){
+  skyGrad(0,65,255,183,77,244,160,80);
+  cobbles(0,65,W,H-65);
+  building(0,28,38,70,C.bTan,C.roofB);
+  winLit(5,38,10,9);winLit(20,38,10,9);winLit(5,54,10,9);
+  px(8,90,12,8,C.doorB);
+  building(52,34,36,64,C.bTan,'#5A3808');
+  px(54,56,32,14,'#3A2010');
+  ctx.fillStyle='#D0C0A0';ctx.font='bold 6px serif';ctx.fillText('CLOSED',57,65);
+  building(170,30,60,68,C.bCream,C.roofR);
+  winLit(175,42,10,9);winLit(193,42,10,9);
+  lamp(48,62);lamp(148,62);
+  ctx.fillStyle='rgba(255,220,80,0.06)';
+  ctx.beginPath();ctx.ellipse(49,78,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(149,78,18,7,0,0,Math.PI*2);ctx.fill();
+  knight(90,92);
+  princess(110,90);
+  px(106,75,28,12,C.cloudW);px(105,76,30,10,C.cloudW);px(112,86,3,4,C.cloudW);
+  ctx.fillStyle='#604010';ctx.font='6px serif';ctx.fillText('ha ha!',108,83);
+  px(78,100,12,7,C.trous);px(79,101,10,5,C.kSilD);
+}
+
+function drawS4(){
+  px(0,0,W,H,C.skyTheatre);
+  px(26,12,188,65,C.stage);
+  ctx.fillStyle='rgba(255,200,80,0.04)';
+  for(var gi=0;gi<45;gi++){ctx.fillRect(95-gi,8,gi*2,68+gi);}
+  px(18,8,26,78,C.curtain);px(196,8,26,78,C.curtain);
+  px(19,8,12,72,'#700008');px(207,8,12,72,'#700008');
+  px(18,8,204,5,'#3A2010');
+  for(var ll=32;ll<200;ll+=26){circ(ll,10,4,C.lamp);px(ll-2,7,5,3,C.winO);}
+  px(75,30,11,32,'#5C3010');px(76,25,9,7,'#5C3010');
+  px(108,34,10,28,'#5C3010');px(109,29,8,7,'#5C3010');
+  px(140,32,11,30,'#5C3010');px(141,27,9,8,'#5C3010');
+  px(26,76,188,3,'rgba(255,200,80,0.25)');
+  for(var row=0;row<3;row++){
+    for(var s=0;s<8;s++){
+      px(4+s*15,82+row*12,13,10,C.seat);
+      px(5+s*15,83+row*11,11,7,'#380004');
+    }
+  }
+  for(var sh=0;sh<8;sh++){px(5+sh*15,72,11,11,'#180200');}
+  px(58,82,14,11,C.kSilver);px(59,76,12,8,C.kSilver);px(60,73,11,4,C.kGold);
+  px(59,70,10,5,C.kBlonde);px(61,68,4,5,C.kRed);
+  px(76,81,16,12,C.pPurp);px(78,75,12,8,C.pSkin);
+  px(76,70,14,7,C.pHair);px(77,69,6,4,C.pHairH);
+  px(80,68,8,3,C.pGold);
+  px(72,76,5,13,'rgba(255,200,80,0.1)');
+}
+
+function drawS5(){
+  px(0,0,W,H,C.skyNight);
+  var stars2=[[10,5],[22,11],[38,4],[54,8],[70,3],[86,12],[102,6],[118,9],[134,4],[148,11],[160,7],[14,20],[46,16],[80,22],[112,17],[152,24],[28,30],[95,27],[140,20]];
+  for(var si=0;si<stars2.length;si++){pt(stars2[si][0],stars2[si][1],C.star);}
+  circ(210,16,11,C.moonC);circ(214,14,9,C.skyNight);
+  cobbles(0,100,W,50);
+  px(0,22,44,H,'#0E1620');winLit(4,32,11,9);winLit(18,32,11,9);winLit(4,48,11,9);
+  px(185,26,55,H,'#0A1420');winLit(188,36,11,9);winLit(204,44,10,8);
+  lamp(52,78);lamp(130,78);lamp(75,76);
+  ctx.fillStyle='rgba(255,220,100,0.08)';
+  ctx.beginPath();ctx.ellipse(53,100,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(131,100,18,7,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(76,100,15,6,0,0,Math.PI*2);ctx.fill();
+  var cx = 130;
+  px(cx,62,52,26,'#3A1C08');
+  px(cx+2,58,48,6,'#3A1C08');
+  px(cx+4,56,8,4,'#3A1C08');
+  px(cx+36,56,8,4,'#3A1C08');
+  px(cx+10,64,28,16,'#2A1004');
+  winLit(cx+12,65,11,11);
+  winLit(cx+27,65,11,11);
+  var w1x=cx+8, w2x=cx+36;
+  circ(w1x,92,9,'#2A1408');circ(w1x,92,7,'#1A0C04');circ(w1x,92,3,'#4A2C10');
+  px(w1x-1,84,2,16,'#4A2C10');px(w1x-8,91,16,2,'#4A2C10');
+  circ(w2x,92,9,'#2A1408');circ(w2x,92,7,'#1A0C04');circ(w2x,92,3,'#4A2C10');
+  px(w2x-1,84,2,16,'#4A2C10');px(w2x-8,91,16,2,'#4A2C10');
+  px(cx-12,88,14,3,'#2A1408');
+  px(cx-22,85,12,3,'#2A1408');
+  px(cx-14,86,4,6,'#3A2810');
+  px(cx-10,87,4,5,'#3A2810');
+  circ(cx-16,95,6,'#1A0C04');circ(cx-16,95,4,'#0A0804');
+  circ(cx-6,95,6,'#1A0C04');circ(cx-6,95,4,'#0A0804');
+  px(160,70,7,10,C.pHair);px(162,70,5,4,C.pSkin);px(164,73,6,8,C.pPurp);
+  px(182,75,4,3,C.pHair);
+  knight(52,92);
+  px(38,101,13,7,C.trous);px(39,102,11,5,C.kSilD);
+  px(62,80,3,3,C.kRed);px(66,80,3,3,C.kRed);
+  px(60,83,9,4,C.kRed);px(61,87,7,3,C.kRed);px(62,90,5,2,C.kRed);px(63,92,3,1,C.kRed);
+}
+
+var scenes = [
+  {label:'The kingdom of Antwerpshire', fn:drawS0, para:0},
+  {label:'Ye Olde Steel & Buckle', fn:drawS1, para:3},
+  {label:'The Rusty Relic', fn:drawS2, para:6},
+  {label:'Seven shops, and everything else', fn:drawS3, para:11},
+  {label:'The theatre on Mercator Square', fn:drawS4, para:16},
+  {label:'The lamplit streets', fn:drawS5, para:21}
+];
+
+var storyParas = [
+  'Once upon a time, in the bustling kingdom of Antwerpshire, there lived a Knight who was \u2014 by most accounts \u2014 quite brave.',
+  'He had slain a dragon or two, navigated treacherous swamps, and once, memorably, talked his way out of a toll bridge standoff with a very stubborn goat. Brave, yes. Composed? That was another matter entirely.',
+  'On one particular Tuesday morning, the Knight had a problem. His favourite pair of armour-plated trousers \u2014 the ones with the comfortable knee guards and the slightly dented left buckle \u2014 had finally given up the ghost. Rusted through at the seams, the squire had said, with the solemn tone of someone announcing a funeral.',
+  'Simple enough, one might think. Antwerpshire was a fine kingdom with no shortage of shops. He would simply pop in somewhere, find a matching pair, and be done with it. He was not done with it.',
+  'The first shop \u2014 Ye Olde Steel & Buckle on the high street \u2014 had plenty of trousers, none of which matched his breastplate even slightly. Too bronze, too gold, too aggressively decorative. One pair had little engraved roses on the shins. He put those back very quickly.',
+  'The second shop smelled strongly of old leather and disappointment. A cheerful merchant presented him with seventeen options. The Knight tried on four of them, got stuck in one, and left with nothing.',
+  'It was in the third shop \u2014 a cluttered, wonderfully chaotic little emporium called The Rusty Relic \u2014 that something unexpected happened.',
+  'He was mid-struggle with a particularly stubborn pair of trousers, one leg on and one leg most certainly not, hopping in a slow desperate circle, when a voice came from somewhere behind a rack of secondhand gauntlets.',
+  '\u201cDo you\u2026 need a hand?\u201d',
+  'The Knight went very still. Then, very slowly, he turned his head. His visor, which he had not remembered to lift, made the motion significantly more dramatic than he intended.',
+  'It was a Princess. She was browsing \u2014 or had been browsing \u2014 and was now watching him with the expression of someone trying very hard to keep a straight face and not quite managing it.',
+  '\u201cNo,\u201d said the Knight, with great dignity. A pause. \u201c\u2026Yes,\u201d he admitted.',
+  'The Princess laughed \u2014 not unkindly, but freely, the way you laugh when something is genuinely funny and there\u2019s no point pretending otherwise. She crossed the shop floor, crouched down, and with the calm efficiency of someone who had untangled far more complicated problems than a stuck knee guard, she freed the buckle in about four seconds.',
+  '\u201cThere,\u201d she said. \u201cThank you,\u201d said the Knight. \u201cI was just\u2026 testing the latch mechanism.\u201d \u201cOf course,\u201d said the Princess, and smiled in a way that suggested she believed absolutely none of that.',
+  'She asked what he was looking for. He explained, perhaps at slightly more length than necessary, about the breastplate and the engravings and the very specific shade of silver. She listened with the patient attention of someone who found this genuinely interesting. \u201cI know a few other shops,\u201d she said. \u201cIf you\u2019d like.\u201d He would like.',
+  'And so they went. The fourth shop had a promising selection that turned out to be entirely the wrong shade. The fifth shop was staffed by a merchant who kept insisting that bronze and silver were essentially the same colour. The sixth shop was closed \u2014 they stood outside it for a moment in companionable silence, appreciating the absurdity together.',
+  'By the seventh shop, they had stopped talking about trousers almost entirely. They talked about everything else instead \u2014 the kind of everything that tumbles out easily when you are walking through cobbled streets with someone whose company feels, unexpectedly and immediately, like somewhere you want to stay.',
+  'She was funny, the Princess. Properly funny, not just politely funny. She had opinions about things and expressed them without apology. She laughed at her own jokes before she\u2019d finished telling them, which the Knight found completely charming and would never, under any circumstances, admit.',
+  'The seventh shop, as it happened, had the trousers. A perfect match \u2014 silver, clean lines, sensible knee guards, not a rose engraving in sight. The Knight held them up. The Princess nodded with the gravity of a royal decree. He bought them without even checking the price.',
+  'They stepped back out into the afternoon streets of Antwerpshire, the trouser quest officially concluded, and the Knight became aware of a mildly alarming sensation: he did not want the day to end.',
+  '\u201cThere\u2019s a play tonight,\u201d said the Princess. \u201cAt the theatre on Mercator Square. It\u2019s about a group of men who decide to go through life permanently, mildly drunk. I know that sounds strange. It\u2019s very good.\u201d The Knight considered this for exactly as long as it took to think yes, obviously, immediately. \u201cI\u2019ll come,\u201d he said.',
+  'Sitting in the warm dark of the theatre that evening, watching actors stumble cheerfully across the stage, the Knight found he was paying very little attention to the play. He was paying attention to her instead.',
+  'The way she laughed at all the right moments and a few of the wrong ones. The way she leaned forward when something on stage surprised her. The way she turned to him with bright eyes after a particularly good scene, as if checking whether he\u2019d caught it too.',
+  'The Knight had read about love, of course. He had always assumed it would arrive with some ceremony. A thunderclap, perhaps. He had not expected it to arrive on an ordinary Tuesday, after seven shops and a pair of silver trousers.',
+  'He walked her through the lamplit streets to where her coach was waiting, and when they said goodnight he smiled and told her he\u2019d had a lovely time \u2014 the single greatest understatement of his entire knightly career.',
+  'He stood there long after the coach had rounded the corner and disappeared into the night, the new trousers tucked under his arm, a ridiculous smile on his face, and the very clear and certain feeling that something had just begun.'
+];
+
+window.onload = function(){
+  var textEl = document.getElementById('story-text');
+  for(var pi=0; pi<storyParas.length; pi++){
+    var pel = document.createElement('p');
+    pel.id = 'para'+pi;
+    pel.textContent = storyParas[pi];
+    textEl.appendChild(pel);
+  }
+  var dotsRow = document.getElementById('dots-row');
+  for(var d=0; d<scenes.length; d++){
+    var de = document.createElement('div');
+    de.className = 'dot' + (d===0?' on':'');
+    dotsRow.appendChild(de);
+  }
+  var cur = 0;
+  function render(i){
+    ctx.clearRect(0,0,W,H);
+    scenes[i].fn();
+    document.getElementById('scene-name').textContent = scenes[i].label;
+    document.getElementById('prev').disabled = (i===0);
+    document.getElementById('next').disabled = (i===scenes.length-1);
+    var allDots = document.querySelectorAll('.dot');
+    for(var j=0;j<allDots.length;j++) allDots[j].classList.toggle('on', j===i);
+    var allP = document.querySelectorAll('#story-text p');
+    for(var k=0;k<allP.length;k++) allP[k].classList.remove('hl');
+    var pidx = scenes[i].para;
+    if(allP[pidx]){
+      allP[pidx].classList.add('hl');
+      allP[pidx].scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+  document.getElementById('prev').onclick = function(){ if(cur>0){cur--;render(cur);} };
+  document.getElementById('next').onclick = function(){ if(cur<scenes.length-1){cur++;render(cur);} };
+  sizeCanvas();
+  render(0);
+  window.addEventListener('resize', sizeCanvas);
+};
+</script>
+</body>
+</html>
