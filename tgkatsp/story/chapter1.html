@@ -182,7 +182,7 @@ function knight(x,y){
   px(x+5,y+4,8,1,C.winY);
   px(x+2,y+3,3,5,C.kBlonde);px(x+13,y+3,3,5,C.kBlonde);
   px(x+2,y+2,2,2,C.kBlondeD);px(x+14,y+2,2,2,C.kBlondeD);
-  px(x+8,y-4,3,5,C.kRed);px(x+9,y-5,1,2,'#E05050');
+  px(x+8,y-2,3,2,C.kRed);
   pt(x+7,y+5,'#201008');pt(x+11,y+5,'#201008');
 }
 function princess(x,y){
@@ -397,31 +397,172 @@ function drawS3(){
 }
 
 function drawS4(){
-  px(0,0,W,H,C.skyTheatre);
-  px(26,12,188,65,C.stage);
-  ctx.fillStyle='rgba(255,200,80,0.04)';
-  for(var gi=0;gi<45;gi++){ctx.fillRect(95-gi,8,gi*2,68+gi);}
-  px(18,8,26,78,C.curtain);px(196,8,26,78,C.curtain);
-  px(19,8,12,72,'#700008');px(207,8,12,72,'#700008');
-  px(18,8,204,5,'#3A2010');
-  for(var ll=32;ll<200;ll+=26){circ(ll,10,4,C.lamp);px(ll-2,7,5,3,C.winO);}
-  px(75,30,11,32,'#5C3010');px(76,25,9,7,'#5C3010');
-  px(108,34,10,28,'#5C3010');px(109,29,8,7,'#5C3010');
-  px(140,32,11,30,'#5C3010');px(141,27,9,8,'#5C3010');
-  px(26,76,188,3,'rgba(255,200,80,0.25)');
-  for(var row=0;row<3;row++){
-    for(var s=0;s<8;s++){
-      px(4+s*15,82+row*12,13,10,C.seat);
-      px(5+s*15,83+row*11,11,7,'#380004');
+  var stageL='#5C3A20',stageD='#3A2010',stageLL='#7A5030';
+  var curtain='#8B0010',curtainD='#5A0008',curtainL='#B01020',curtainG='#C89020';
+  var beam='#2A1808';
+  var seatC='#5A1010',seatD='#380808',seatL='#7A2020',seatArm='#3A1808';
+  var floorD='#1A0C04',floorL='#2A1808';
+  var wallD='#150A02',wallL='#1E1008';
+  var actorS='#4A2810',actorSL='#6A3818',actorD='#1A0C04';
+  var woodC='#6A3A10',woodL='#8A5020';
+  var velvet='#6A1020',velvetL='#8A2030';
+  var gold='#C8A020',goldL='#E8C040';
+  // back walls
+  px(0,0,W,H,wallD);
+  for(var wx=0;wx<20;wx+=5){px(wx,0,3,H,wallL);}
+  for(var wx2=W-20;wx2<W;wx2+=5){px(wx2,0,3,H,wallL);}
+  px(22,0,196,75,wallL);
+  px(22,10,196,2,gold);px(22,14,196,1,goldL);
+  px(22,72,196,2,gold);px(22,75,196,1,goldL);
+  for(var wp=30;wp<210;wp+=36){
+    px(wp,18,28,52,wallD);px(wp+1,19,26,50,wallL);
+    px(wp+2,20,24,2,gold);px(wp+2,68,24,2,gold);
+    px(wp+2,20,2,50,gold);px(wp+24,20,2,50,gold);
+  }
+  // proscenium arch
+  px(20,0,200,12,beam);px(20,12,200,3,woodC);
+  px(20,0,200,2,gold);px(20,10,200,2,gold);
+  px(20,0,18,18,woodC);px(202,0,18,18,woodC);
+  px(22,2,14,14,woodL);px(204,2,14,14,woodL);
+  px(24,4,10,10,gold);px(206,4,10,10,gold);
+  px(26,6,6,6,goldL);px(208,6,6,6,goldL);
+  // stage lights
+  for(var ll=35;ll<210;ll+=22){
+    px(ll,11,6,4,beam);circ(ll+3,13,3,C.lamp);
+    ctx.fillStyle='rgba(255,230,120,0.06)';
+    ctx.beginPath();ctx.moveTo(ll+3,15);ctx.lineTo(ll-4,45);ctx.lineTo(ll+10,45);ctx.fill();
+  }
+  // stage floor boards
+  for(var sf=22;sf<218;sf+=8){
+    px(sf,72,7,28,stageLL);px(sf+7,72,1,28,stageD);
+    px(sf+1,75,5,1,stageL);px(sf+1,84,5,1,stageL);
+  }
+  px(22,98,196,4,woodC);px(22,100,196,2,woodL);
+  // left curtain
+  px(20,0,22,100,curtain);
+  for(var cf=0;cf<100;cf+=10){px(20,cf,4,8,curtainD);px(26,cf+2,3,6,curtainL);px(32,cf,3,8,curtainD);}
+  px(40,0,3,100,curtainG);px(41,2,1,96,goldL);
+  // right curtain
+  px(218,0,22,100,curtain);
+  for(var cf2=0;cf2<100;cf2+=10){px(236,cf2,4,8,curtainD);px(229,cf2+2,4,6,curtainL);px(222,cf2,3,8,curtainD);}
+  px(216,0,3,100,curtainG);px(217,2,1,96,goldL);
+  // curtain tiebacks
+  px(38,55,5,8,gold);px(39,56,3,6,goldL);px(216,55,5,8,gold);px(217,56,3,6,goldL);
+  // curtain swag top
+  for(var cs=22;cs<218;cs+=18){
+    circ(cs+9,6,7,curtain);px(cs,4,18,4,curtainD);px(cs+3,2,12,4,curtain);px(cs+5,0,8,3,curtainL);
+  }
+  px(20,0,200,2,gold);
+  // backdrop scenery (painted tavern)
+  px(48,16,144,56,wallD);
+  px(90,52,30,4,woodC);px(88,56,34,2,woodL);px(92,56,4,12,woodL);px(112,56,4,12,woodL);
+  px(52,22,20,24,'#1A2A3A');px(62,22,2,24,'#604010');px(52,34,20,2,'#604010');
+  px(53,23,18,3,'#3A5A8A');
+  circ(160,62,8,woodC);px(154,58,12,8,woodL);
+  for(var br=0;br<3;br++){px(154,58+br*3,12,1,stageD);}
+  // actor 1 — centre, arms raised
+  var a1x=95,a1y=40;
+  px(a1x+3,a1y+20,8,18,actorS);px(a1x+4,a1y+21,6,14,actorSL);
+  px(a1x+4,a1y+38,3,5,actorS);px(a1x+8,a1y+38,3,5,actorS);
+  px(a1x+4,a1y+43,3,4,actorD);px(a1x+8,a1y+43,3,4,actorD);
+  px(a1x+4,a1y+15,6,7,C.pSkin);px(a1x+3,a1y+12,8,5,'#3A2810');
+  px(a1x+1,a1y+20,3,5,actorS);px(a1x,a1y+16,3,5,actorS);px(a1x-1,a1y+13,3,4,C.pSkin);
+  px(a1x+11,a1y+20,3,5,actorS);px(a1x+12,a1y+16,3,5,actorS);px(a1x+13,a1y+13,3,4,C.pSkin);
+  pt(a1x+5,a1y+18,'#201008');pt(a1x+8,a1y+18,'#201008');
+  // actor 2 — left, holding tankard
+  var a2x=62,a2y=44;
+  px(a2x+3,a2y+20,7,16,actorS);px(a2x+4,a2y+21,5,12,actorSL);
+  px(a2x+3,a2y+36,3,5,actorS);px(a2x+7,a2y+37,3,4,actorS);
+  px(a2x+4,a2y+14,6,8,C.pSkin);px(a2x+3,a2y+11,8,5,'#5C3820');
+  px(a2x+10,a2y+22,4,3,actorS);px(a2x+13,a2y+20,3,4,actorS);px(a2x+15,a2y+19,3,3,C.pSkin);
+  px(a2x-2,a2y+20,4,5,actorS);px(a2x-4,a2y+18,4,5,C.pSkin);
+  px(a2x-8,a2y+16,5,6,woodL);px(a2x-7,a2y+17,3,4,'#A06820');px(a2x-4,a2y+18,2,3,woodL);
+  pt(a2x+5,a2y+17,'#201008');pt(a2x+7,a2y+17,'#201008');
+  // actor 3 — right, bowing
+  var a3x=140,a3y=46;
+  px(a3x+2,a3y+18,7,15,actorS);px(a3x+3,a3y+19,5,11,actorSL);
+  px(a3x+2,a3y+33,3,5,actorS);px(a3x+6,a3y+34,3,4,actorS);
+  px(a3x+5,a3y+11,6,8,C.pSkin);px(a3x+4,a3y+8,8,5,'#2A1808');
+  px(a3x,a3y+18,3,5,actorS);px(a3x-2,a3y+16,3,5,actorS);
+  px(a3x+9,a3y+20,3,3,actorS);px(a3x+11,a3y+22,3,4,actorS);
+  pt(a3x+6,a3y+14,'#201008');pt(a3x+9,a3y+14,'#201008');
+  // orchestra pit
+  px(22,100,196,6,'#140804');
+  px(50,94,2,8,'#0A0402');px(48,94,6,2,'#0A0402');
+  px(80,93,2,9,'#0A0402');px(78,93,6,2,'#0A0402');
+  px(110,95,2,7,'#0A0402');px(108,95,6,2,'#0A0402');
+  px(165,94,2,8,'#0A0402');px(163,94,6,2,'#0A0402');
+  px(195,93,2,9,'#0A0402');px(193,93,6,2,'#0A0402');
+  // audience floor
+  px(0,102,W,48,floorD);
+  px(108,102,24,48,velvet);
+  for(var fc=104;fc<150;fc+=6){px(110,fc,20,1,velvetL);}
+  // seat rows
+  var rowY=[104,117,130];
+  for(var ri=0;ri<3;ri++){
+    var ry=rowY[ri];
+    for(var si=0;si<14;si++){
+      if(si===7) continue;
+      var sxi=4+si*16;
+      px(sxi,ry,13,9,seatC);px(sxi+1,ry+1,11,7,seatL);
+      px(sxi+1,ry+9,11,4,velvet);px(sxi+2,ry+10,9,2,velvetL);
+      px(sxi,ry+4,2,9,seatArm);px(sxi+11,ry+4,2,9,seatArm);
     }
   }
-  for(var sh=0;sh<8;sh++){px(5+sh*15,72,11,11,'#180200');}
-  px(58,82,14,11,C.kSilver);px(59,76,12,8,C.kSilver);px(60,73,11,4,C.kGold);
-  px(59,70,10,5,C.kBlonde);px(61,68,4,5,C.kRed);
-  px(76,81,16,12,C.pPurp);px(78,75,12,8,C.pSkin);
-  px(76,70,14,7,C.pHair);px(77,69,6,4,C.pHairH);
-  px(80,68,8,3,C.pGold);
-  px(72,76,5,13,'rgba(255,200,80,0.1)');
+  // audience silhouettes row 1
+  var r1h=[4,20,36,52,68,84,132,148,164,180,196,212];
+  for(var h=0;h<r1h.length;h++){circ(r1h[h]+6,104,5,'#0A0402');px(r1h[h]+3,108,6,4,'#0A0402');}
+  // row 2
+  var r2h=[12,28,44,60,76,140,156,172,188,204];
+  for(var h2=0;h2<r2h.length;h2++){circ(r2h[h2]+6,117,5,'#120804');px(r2h[h2]+3,121,6,4,'#120804');}
+  // princess seat (sx=84, seat back top psy=130) — original proportions restored
+  var psx=84,psy=130;
+  px(psx+1,psy+5,12,8,C.pPurp);px(psx+2,psy+6,10,5,C.pPurpL);
+  px(psx,psy+5,2,6,C.pPurp);px(psx+12,psy+5,2,6,C.pPurp);
+  px(psx+2,psy+13,10,5,C.pPurpD);px(psx+2,psy+17,3,1,C.pGold);px(psx+9,psy+17,3,1,C.pGold);
+  px(psx+3,psy-2,8,6,C.pSkin);
+  px(psx+2,psy-5,10,5,C.pHair);px(psx+3,psy-5,4,3,C.pHairH);
+  px(psx+2,psy-1,2,6,C.pHair);px(psx+10,psy-1,2,6,C.pHair);
+  px(psx+3,psy-6,8,2,C.pGold);
+  px(psx+3,psy-7,1,2,C.pGold);px(psx+6,psy-8,2,3,C.pGold);px(psx+10,psy-7,1,2,C.pGold);
+  pt(psx+4,psy,'#201008');pt(psx+8,psy,'#201008');
+  px(psx+5,psy+2,4,1,C.pSkinS);
+  px(psx,psy+9,3,3,C.pSkin);
+
+  // knight seat (sx=68, seat back top ksy=130)
+  var ksx=68,ksy=130;
+  px(ksx,ksy,13,9,seatC);px(ksx+1,ksy+1,11,7,seatL);
+  px(ksx+1,ksy+7,11,4,velvet);px(ksx+2,ksy+8,9,2,velvetL);
+  px(ksx,ksy+2,2,10,seatArm);px(ksx+11,ksy+2,2,10,seatArm);
+  // knight body shifted down 3px relative to seat so feet align with princess
+  var ky=ksy+3;
+  // plume
+  px(ksx+6,ky-17,2,6,C.kRed);pt(ksx+6,ky-18,'#FF6060');pt(ksx+7,ky-18,'#FF6060');
+  // helmet (9px tall)
+  px(ksx+2,ky-12,10,9,C.kSilver);px(ksx+3,ky-11,8,7,C.kSilD);
+  px(ksx+3,ky-8,8,3,C.kGold);px(ksx+4,ky-7,6,2,C.winY);
+  px(ksx+1,ky-10,2,7,C.kBlonde);px(ksx+10,ky-10,2,7,C.kBlonde);
+  // eyes — drawn last so nothing overwrites them
+  pt(ksx+4,ky-7,'#201008');pt(ksx+8,ky-7,'#201008');
+  // visor angle toward princess
+  px(ksx+9,ky-9,2,2,C.kGold);
+  // neck (1px)
+  px(ksx+5,ky-3,4,1,C.kSkin);
+  // torso (11px)
+  px(ksx+1,ky-2,12,11,C.kSilver);px(ksx+3,ky-1,8,9,C.kSilD);
+  px(ksx+4,ky,6,5,C.kGold);px(ksx+5,ky+1,4,2,C.winY);
+  // arms
+  px(ksx,ky-2,2,9,C.kSilver);px(ksx+12,ky-2,2,9,C.kSilver);
+  px(ksx,ky+6,2,4,C.kSilD);px(ksx+12,ky+6,2,4,C.kSilD);
+  // legs (4px)
+  px(ksx+2,ky+9,4,4,C.kSilver);px(ksx+8,ky+9,4,4,C.kSilver);
+  px(ksx+2,ky+11,4,2,C.kGold);px(ksx+8,ky+11,4,2,C.kGold);
+  // boots (2px) — bottom at ky+15 = ksy+18, matching princess feet
+  px(ksx+1,ky+13,5,2,C.kSilD);px(ksx+7,ky+13,5,2,C.kSilD);
+  px(ksx+2,ky+13,3,1,'#707880');px(ksx+8,ky+13,3,1,'#707880');
+  // warm glow between them
+  ctx.fillStyle='rgba(255,200,80,0.07)';ctx.fillRect(ksx+11,ksy-12,psx-ksx,22);
+  ctx.fillStyle='rgba(255,180,60,0.04)';ctx.fillRect(22,12,196,90);
 }
 
 function drawS5(){
@@ -450,27 +591,47 @@ function drawS5(){
   px(w1x-1,84,2,16,'#4A2C10');px(w1x-8,91,16,2,'#4A2C10');
   circ(w2x,92,9,'#2A1408');circ(w2x,92,7,'#1A0C04');circ(w2x,92,3,'#4A2C10');
   px(w2x-1,84,2,16,'#4A2C10');px(w2x-8,91,16,2,'#4A2C10');
-  px(cx-12,88,14,3,'#2A1408');
-  px(cx-22,85,12,3,'#2A1408');
-  px(cx-14,86,4,6,'#3A2810');
-  px(cx-10,87,4,5,'#3A2810');
-  circ(cx-16,95,6,'#1A0C04');circ(cx-16,95,4,'#0A0804');
-  circ(cx-6,95,6,'#1A0C04');circ(cx-6,95,4,'#0A0804');
-  px(160,70,7,10,C.pHair);px(162,70,5,4,C.pSkin);px(164,73,6,8,C.pPurp);
-  px(182,75,4,3,C.pHair);
+  // horse — ahead of coach, short neck, proper horse proportions
+  var hc='#2A1408',hl='#3C2214',hd='#0A0402';
+  px(cx-42,79,26,11,hc);
+  px(cx-41,78,24,3,hl);px(cx-41,79,24,2,hl);
+  px(cx-18,77,4,5,hl);px(cx-17,76,2,4,hl);
+  px(cx-45,74,8,7,hc);px(cx-44,73,6,6,hl);
+  px(cx-54,68,10,8,hc);px(cx-53,69,8,6,hl);
+  px(cx-56,71,5,5,hc);px(cx-55,72,3,4,hl);
+  pt(cx-55,74,'#0A0402');pt(cx-54,74,'#0A0402');
+  px(cx-50,70,2,2,hd);pt(cx-50,70,'#D0C0A0');
+  px(cx-46,66,3,4,hc);px(cx-45,65,2,4,hl);pt(cx-45,64,hl);
+  px(cx-46,67,2,11,hd);px(cx-45,66,2,12,'#1A0C04');
+  px(cx-55,71,43,1,'#8A6020');px(cx-55,73,43,1,'#8A6020');
+  px(cx-46,69,2,5,'#8A6020');
+  px(cx-13,72,13,1,'#8A6020');
+  px(cx-39,90,3,10,hc);px(cx-38,90,1,10,hl);px(cx-40,99,5,2,hd);
+  px(cx-33,90,3,8,hc);px(cx-32,90,1,8,hl);px(cx-33,98,4,2,hc);px(cx-34,99,6,2,hd);
+  px(cx-24,90,3,10,hc);px(cx-23,90,1,10,hl);px(cx-25,99,5,2,hd);
+  px(cx-19,91,3,8,hc);px(cx-18,91,1,8,hl);px(cx-20,99,5,2,hd);
+  px(cx-17,82,3,2,hc);px(cx-16,84,3,3,hl);px(cx-17,87,2,5,hc);px(cx-18,91,2,3,hl);
+  // princess in left coach window — visible, waving goodbye
+  var wx=cx+13,wy=66;
+  px(wx,wy,9,8,'#1A0C04');
+  px(wx+2,wy,5,1,C.pGold);px(wx+3,wy-1,3,1,C.pGold);
+  px(wx+1,wy,7,3,C.pHair);px(wx+2,wy,3,2,C.pHairH);
+  px(wx+1,wy+3,7,3,C.pSkin);
+  pt(wx+2,wy+4,'#201008');pt(wx+5,wy+4,'#201008');
+  px(wx+3,wy+5,3,1,'#C07050');
+  px(wx,wy+6,9,2,C.pPurp);px(wx+1,wy+6,7,1,C.pPurpL);
+  px(wx+7,wy+3,2,3,C.pSkin);
   knight(52,92);
   px(38,101,13,7,C.trous);px(39,102,11,5,C.kSilD);
-  px(62,80,3,3,C.kRed);px(66,80,3,3,C.kRed);
-  px(60,83,9,4,C.kRed);px(61,87,7,3,C.kRed);px(62,90,5,2,C.kRed);px(63,92,3,1,C.kRed);
 }
 
 var scenes = [
-  {label:'The kingdom of Antwerpshire', fn:drawS0, para:0},
-  {label:'Ye Olde Steel & Buckle', fn:drawS1, para:3},
-  {label:'The Rusty Relic', fn:drawS2, para:6},
-  {label:'Seven shops, and everything else', fn:drawS3, para:11},
-  {label:'The theatre on Mercator Square', fn:drawS4, para:16},
-  {label:'The lamplit streets', fn:drawS5, para:21}
+  {label:'The kingdom of Antwerpshire',       fn:drawS0, para:0,  paraEnd:2},
+  {label:'Ye Olde Steel & Buckle',            fn:drawS1, para:3,  paraEnd:5},
+  {label:'The Rusty Relic',                   fn:drawS2, para:6,  paraEnd:14},
+  {label:'Seven shops, and everything else',  fn:drawS3, para:15, paraEnd:20},
+  {label:'The theatre on Mercator Square',    fn:drawS4, para:21, paraEnd:23},
+  {label:'The lamplit streets',               fn:drawS5, para:24, paraEnd:25}
 ];
 
 var storyParas = [
@@ -527,11 +688,12 @@ window.onload = function(){
     for(var j=0;j<allDots.length;j++) allDots[j].classList.toggle('on', j===i);
     var allP = document.querySelectorAll('#story-text p');
     for(var k=0;k<allP.length;k++) allP[k].classList.remove('hl');
-    var pidx = scenes[i].para;
-    if(allP[pidx]){
-      allP[pidx].classList.add('hl');
-      allP[pidx].scrollIntoView({behavior:'smooth', block:'nearest'});
+    var pStart = scenes[i].para;
+    var pEnd = scenes[i].paraEnd;
+    for(var h=pStart;h<=pEnd;h++){
+      if(allP[h]) allP[h].classList.add('hl');
     }
+    if(allP[pStart]) allP[pStart].scrollIntoView({behavior:'smooth', block:'nearest'});
   }
   document.getElementById('prev').onclick = function(){ if(cur>0){cur--;render(cur);} };
   document.getElementById('next').onclick = function(){ if(cur<scenes.length-1){cur++;render(cur);} };
