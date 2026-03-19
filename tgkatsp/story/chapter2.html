@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Goofy Knight and the Silly Princess</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:#2C1A0E;}
+#app{display:flex;flex-direction:column;width:100%;height:100%;background:#2C1A0E;}
+#story-title{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #4A2E10;flex-shrink:0;}
+#title-text{font-family:Georgia,serif;font-style:italic;font-size:15px;color:#F0D8A8;letter-spacing:0.08em;flex:1;text-align:center;}
+#prev-chapter-btn{font-family:Georgia,serif;font-size:12px;background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#prev-chapter-btn:hover{background:#5A3A18;}
+#next-chapter-btn{font-family:Georgia,serif;font-size:12px;background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#next-chapter-btn:hover{background:#5A3A18;}
+#main{display:flex;flex-direction:row;flex:1;min-height:0;}
+#left{flex:0 0 62%;display:flex;flex-direction:column;border-right:1px solid #4A2E10;min-width:0;}
+#canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#1E1008;min-height:0;overflow:hidden;}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
+#scene-bar{padding:7px 14px;background:#3A1F08;border-top:1px solid #4A2E10;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+#scene-name{font-family:Georgia,serif;font-size:12px;color:#E8C890;font-style:italic;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#nav-btns{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.nbtn{background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;font-family:Georgia,serif;font-size:12px;padding:4px 12px;cursor:pointer;}
+.nbtn:hover{background:#5A3A18;}
+.nbtn:disabled{opacity:0.3;cursor:default;}
+#dots-row{display:flex;gap:4px;}
+.dot{width:5px;height:5px;border-radius:50%;background:#6A4520;}
+.dot.on{background:#E8C890;}
+#right{flex:1;display:flex;flex-direction:column;background:#F5EDD6;overflow:hidden;min-width:0;}
+#text-header{padding:12px 16px 10px;border-bottom:1px solid #D4C0A0;flex-shrink:0;}
+#text-chapter-label{font-family:Georgia,serif;font-size:11px;font-style:italic;color:#8B5E2A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+#text-chapter-title{font-family:Georgia,serif;font-size:13px;font-style:italic;color:#5A3010;font-weight:bold;}
+#story-scroll{flex:1;overflow-y:auto;padding:14px 16px;min-height:0;scrollbar-width:thin;scrollbar-color:#C8A860 #F5EDD6;}
+#story-scroll::-webkit-scrollbar{width:5px;}
+#story-scroll::-webkit-scrollbar-thumb{background:#C8A860;border-radius:3px;}
+#story-text p{font-family:Georgia,serif;font-size:14px;line-height:1.9;color:#3A2010;margin-bottom:0.9em;}
+#story-text p.hl{background:#FFF0B0;border-left:2px solid #C8A040;padding:2px 6px;border-radius:0 2px 2px 0;}
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="story-title">
+    <div style="flex:0 0 110px;display:flex;justify-content:flex-start;">
+      <button id="prev-chapter-btn"><a href="chapter1.html">&larr; Previous chapter</a></button>
+    </div>
+    <div id="title-text">The Goofy Knight and the Silly Princess</div>
+    <div style="flex:0 0 110px;display:flex;justify-content:flex-end;">
+      <button id="next-chapter-btn">Next chapter &rarr;</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="left">
+      <div id="canvas-wrap"><canvas id="c"></canvas></div>
+      <div id="scene-bar">
+        <div id="scene-name"></div>
+        <div id="nav-btns">
+          <button class="nbtn" id="prev">&#8592;</button>
+          <div id="dots-row"></div>
+          <button class="nbtn" id="next">&#8594;</button>
+        </div>
+      </div>
+    </div>
+    <div id="right">
+      <div id="text-header">
+        <div id="text-chapter-label">Chapter II</div>
+        <div id="text-chapter-title">In which the Knight arrives at the castle, the Princess tries not to giggle, and the tablecloth receives an uninvited portion of the main course</div>
+      </div>
+      <div id="story-scroll"><div id="story-text"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+var W = 240, H = 150;
+canvas.width = W; canvas.height = H;
+
+function sizeCanvas(){
+  var wrap = document.getElementById('canvas-wrap');
+  var aw = wrap.clientWidth - 16, ah = wrap.clientHeight - 16;
+  var scale = Math.min(Math.floor(aw/W), Math.floor(ah/H));
+  if(scale < 1) scale = 1;
+  canvas.style.width = (W*scale)+'px';
+  canvas.style.height = (H*scale)+'px';
+}
+
+var C = {
+  skyNight:'#12101E', skyEve:'#1E1428', skyDusk:'#2A1E38',
+  moonC:'#FFF0C0', star:'#FFFACC',
+  cobL:'#C8B898', cobD:'#A09070', cobLine:'#806040',
+  grassG:'#5CA840', grassD:'#3E8228',
+  bCream:'#F0DFB8', bTan:'#DCC898', bDark:'#9A8050',
+  roofR:'#C03020', roofB:'#7A3800',
+  winY:'#FFE870', winO:'#FFB840',
+  doorB:'#7A4A28', wood:'#D4A860', woodD:'#8A6020',
+  // castle colours
+  stone:'#C0B090', stoneD:'#A09070', stoneL:'#D8C8A0', stoneDk:'#807050',
+  cFlag:'#C83020', cFlagB:'#1A3A80',
+  cGate:'#5A3808', cGateD:'#3A2005',
+  cTorch:'#FFD060', cTorchO:'#FF8020',
+  // room / interior
+  roomW:'#EDD8A8', roomS:'#D4BC88', roomFloor:'#C8A060', roomFloorD:'#8A6820',
+  tableW:'#F8F4EC', tableC:'#E0D8C8', tableD:'#C0B898',
+  tablecloth:'#F5F0E8', tableclothS:'#E8E0D0',
+  chair:'#8A5020', chairD:'#6A3810',
+  plate:'#E8E0D0', plateD:'#C8C0B0', food:'#C85020', foodD:'#A03818',
+  candle:'#FFE870', candleO:'#FF9020',
+  tapestry1:'#8A2030', tapestry2:'#1A3A60', tapestryG:'#C8A020',
+  curtainR:'#8B0010', curtainG:'#C89020',
+  // characters
+  kSilver:'#C8D0DC', kSilD:'#9AA2B0', kGold:'#D8B840',
+  kBlonde:'#F8C838', kBlondeD:'#D0980C',
+  kSkin:'#F8C8A0', kSkinS:'#E0A070', kRed:'#C83020',
+  pHair:'#3A1800', pHairH:'#622808',
+  pSkin:'#FCCCA0', pSkinS:'#E8A870',
+  pPurp:'#7830C0', pPurpL:'#A060E0', pPurpD:'#501890', pGold:'#D8A010',
+  // king & queen
+  kingRobe:'#1A3A80', kingRobeL:'#2A5AA0', kingRobeD:'#0A2050',
+  kingCrown:'#D8A010', kingSkin:'#E8C090',
+  queenRobe:'#8A1A30', queenRobeL:'#B02848', queenRobeD:'#5A0A1A',
+  queenCrown:'#D8A010', queenHair:'#F0D878',
+  napkin:'#F0ECD8',
+  // lamp / environment
+  lpost:'#604818', lamp:'#FFE890',
+  trous:'#C8D4E0',
+  sweat:'#A0C8E0',
+};
+
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function pt(x,y,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),1,1);}
+function circ(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function tri(x1,y1,x2,y2,x3,y3,c){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.fill();}
+function skyGrad(y0,y1,r0,g0,b0,r1,g1,b1){
+  for(var y=y0;y<y1;y++){
+    var t=(y-y0)/(y1-y0);
+    ctx.fillStyle='rgb('+Math.round(r0+(r1-r0)*t)+','+Math.round(g0+(g1-g0)*t)+','+Math.round(b0+(b1-b0)*t)+')';
+    ctx.fillRect(0,y,W,1);
+  }
+}
+function cobbles(x,y,w,h){
+  px(x,y,w,h,C.cobL);
+  for(var cy=y;cy<y+h;cy+=5){
+    var off=(Math.floor((cy-y)/5)%2===0)?0:4;
+    for(var cx2=x+off;cx2<x+w;cx2+=9){
+      px(cx2,cy,7,4,C.cobD);px(cx2,cy+4,7,1,C.cobLine);px(cx2+7,cy,1,4,C.cobLine);
+    }
+  }
+}
+function winLit(x,y,w,h){
+  px(x,y,w,h,'#604010');px(x+1,y+1,w-2,h-2,C.winY);
+  px(x+1,y+1,w-2,2,C.winO);px(x+1,y+1,1,h-2,'#FFF8B0');
+  px(x+(w>>1),y,1,h,'#604010');px(x,y+(h>>1),w,1,'#604010');
+}
+function lamp(x,y){
+  px(x,y,3,24,C.lpost);px(x-4,y,11,4,C.lpost);px(x-3,y+1,9,3,C.lamp);circ(x+1,y-2,4,C.lamp);
+}
+function torch(x,y){
+  px(x,y,3,10,C.woodD);px(x-1,y,5,3,C.woodD);
+  circ(x+1,y-1,3,C.cTorch);circ(x+1,y-1,2,C.cTorchO);pt(x+1,y-3,C.candle);
+  ctx.fillStyle='rgba(255,180,60,0.1)';ctx.beginPath();ctx.ellipse(x+1,y+2,8,5,0,0,Math.PI*2);ctx.fill();
+}
+
+// knight function (same design as ch1)
+function knight(x,y){
+  px(x+3,y+21,6,4,C.kSilD);px(x+10,y+21,6,4,C.kSilD);
+  px(x+4,y+22,4,2,'#707880');px(x+11,y+22,4,2,'#707880');
+  px(x+3,y+14,6,8,C.kSilver);px(x+10,y+14,6,8,C.kSilver);
+  px(x+4,y+18,4,3,C.kGold);px(x+11,y+18,4,3,C.kGold);
+  px(x+2,y+20,3,2,C.kSilD);px(x+14,y+20,3,2,C.kSilD);
+  px(x+1,y+8,16,7,C.kSilver);px(x+4,y+9,9,5,C.kSilD);
+  px(x+5,y+10,6,3,C.kGold);px(x+6,y+11,4,1,C.winY);
+  px(x,y+8,3,7,C.kSilver);px(x+15,y+8,3,7,C.kSilver);
+  px(x,y+14,3,4,C.kSilD);px(x+15,y+14,3,4,C.kSilD);
+  px(x+6,y+6,6,3,C.kSkin);
+  px(x+3,y,12,7,C.kSilver);px(x+4,y+1,10,5,C.kSilD);
+  px(x+4,y+3,10,3,C.kGold);px(x+5,y+4,8,1,C.winY);
+  px(x+2,y+3,3,5,C.kBlonde);px(x+13,y+3,3,5,C.kBlonde);
+  px(x+2,y+2,2,2,C.kBlondeD);px(x+14,y+2,2,2,C.kBlondeD);
+  px(x+8,y-2,3,2,C.kRed);
+  pt(x+7,y+5,'#201008');pt(x+11,y+5,'#201008');
+}
+
+function princess(x,y){
+  px(x+2,y+16,14,9,C.pPurp);px(x,y+19,18,7,C.pPurpD);
+  px(x+2,y+24,14,1,C.pGold);
+  px(x+1,y+22,2,3,C.pPurpD);px(x+15,y+22,2,3,C.pPurpD);
+  px(x+4,y+9,10,8,C.pPurp);px(x+5,y+10,8,5,C.pPurpL);
+  px(x+2,y+10,3,6,C.pPurp);px(x+13,y+10,3,6,C.pPurp);
+  px(x+3,y+14,2,3,C.pSkin);px(x+13,y+14,2,3,C.pSkin);
+  // neck
+  px(x+6,y+7,6,3,C.pSkin);
+  // face drawn first — clear skin block
+  px(x+4,y+1,10,7,C.pSkin);
+  // eyes and mouth on face
+  pt(x+6,y+3,'#201008');pt(x+10,y+3,'#201008');
+  px(x+6,y+5,4,1,C.pSkinS);
+  // hair drawn after face — top and sides only
+  px(x+4,y-3,10,5,C.pHair);px(x+5,y-3,4,3,C.pHairH);
+  px(x+3,y+1,2,8,C.pHair);px(x+13,y+1,2,8,C.pHair);
+  // crown
+  px(x+5,y-4,8,2,C.pGold);
+  px(x+5,y-5,1,2,C.pGold);px(x+7,y-6,3,3,C.pGold);px(x+11,y-5,1,2,C.pGold);
+}
+
+// king: seated, blue robe, crown
+function king(x,y){
+  // robe / body
+  px(x+1,y+8,16,20,C.kingRobe);px(x+3,y+9,12,16,C.kingRobeL);
+  px(x,y+8,2,18,C.kingRobe);px(x+16,y+8,2,18,C.kingRobe);
+  // ermine trim
+  px(x+1,y+8,16,3,C.stoneL);px(x+2,y+9,12,2,'#F8F4F0');
+  for(var d=0;d<6;d++){pt(x+3+d*2,y+10,'#404040');}
+  // legs
+  px(x+3,y+26,5,6,C.kingRobe);px(x+10,y+26,5,6,C.kingRobe);
+  px(x+3,y+31,5,3,C.stoneDk);px(x+10,y+31,5,3,C.stoneDk);
+  // head
+  px(x+4,y+2,10,7,C.kingSkin);
+  pt(x+6,y+4,'#201008');pt(x+10,y+4,'#201008');
+  px(x+7,y+6,4,1,'#C07050');
+  // beard
+  px(x+4,y+7,10,3,'#C0A880');px(x+5,y+8,8,2,'#D0B890');
+  // crown
+  px(x+3,y,12,3,C.kingCrown);
+  px(x+3,y-1,2,2,C.kingCrown);px(x+7,y-2,3,3,C.kingCrown);px(x+12,y-1,2,2,C.kingCrown);
+  pt(x+8,y-2,'#FFE860');
+  // arms
+  px(x,y+10,2,7,C.kingRobe);px(x+16,y+10,2,7,C.kingRobe);
+  px(x,y+16,3,3,C.kingSkin);px(x+15,y+16,3,3,C.kingSkin);
+}
+
+// queen: seated, red robe, crown, light blonde-grey hair
+function queen(x,y){
+  // body / robe
+  px(x+1,y+14,16,20,C.queenRobe);px(x+3,y+15,12,16,C.queenRobeL);
+  px(x,y+14,2,18,C.queenRobe);px(x+16,y+14,2,18,C.queenRobe);
+  // ermine collar
+  px(x+1,y+14,16,3,C.stoneL);px(x+2,y+15,12,2,'#F8F4F0');
+  for(var d=0;d<6;d++){pt(x+3+d*2,y+16,'#404040');}
+  // legs
+  px(x+3,y+32,5,6,C.queenRobe);px(x+10,y+32,5,6,C.queenRobe);
+  px(x+3,y+37,5,3,C.stoneDk);px(x+10,y+37,5,3,C.stoneDk);
+  // arms
+  px(x,y+16,2,7,C.queenRobe);px(x+16,y+16,2,7,C.queenRobe);
+  px(x,y+22,3,3,C.kingSkin);px(x+15,y+22,3,3,C.kingSkin);
+  // neck — narrow
+  px(x+6,y+12,5,2,C.kingSkin);
+  // hair drawn FIRST so face overwrites it
+  px(x+3,y+2,12,5,C.queenHair);px(x+4,y+2,5,3,'#F8E898');
+  px(x+2,y+6,3,9,C.queenHair);px(x+13,y+6,3,9,C.queenHair);
+  // face drawn over hair
+  px(x+4,y+6,10,7,C.kingSkin);
+  px(x+6,y+11,6,1,'#C07050');
+  // eyes drawn last so nothing overwrites them
+  pt(x+6,y+8,'#201008');pt(x+9,y+8,'#201008');
+  // crown drawn last
+  px(x+4,y,10,3,C.queenCrown);
+  px(x+4,y-1,2,2,C.queenCrown);px(x+8,y-2,3,3,C.queenCrown);px(x+13,y-1,2,2,C.queenCrown);
+}
+
+// ---- SCENES ----
+
+function drawS0(){
+  // Knight's chambers — nervous preparation, evening light
+  // warm interior
+  px(0,0,W,H,C.roomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.roomS);}}
+  // floor
+  for(var fx=0;fx<W;fx+=14){px(fx,110,13,40,C.roomFloor);px(fx+13,110,1,40,C.roomFloorD);}
+  px(0,110,W,2,'rgba(0,0,0,0.1)');
+  // window with evening sky — clipped to window bounds only
+  px(W-50,15,36,50,'#604010');px(W-49,16,34,48,'#2A1428');
+  ctx.save();ctx.beginPath();ctx.rect(W-49,16,34,48);ctx.clip();
+  skyGrad(16,64,40,20,60,100,60,130);
+  ctx.restore();
+  // re-draw window frame over sky
+  px(W-50,15,36,2,'#604010');px(W-50,63,36,2,'#604010');
+  px(W-50,15,2,50,'#604010');px(W-16,15,2,50,'#604010');
+  px(W-32,15,2,50,'#604010');px(W-50,39,36,2,'#604010');
+  // stars through window
+  pt(W-44,22,C.star);pt(W-28,20,C.star);pt(W-20,30,C.star);
+  // moon through window
+  circ(W-25,28,5,C.moonC);circ(W-23,26,4,'#2A1428');
+  // wardrobe left
+  px(5,15,30,95,C.woodD);px(6,16,28,93,C.wood);
+  px(7,17,26,2,C.woodD);px(7,88,26,2,C.woodD);
+  px(19,16,2,94,C.woodD);
+  px(10,35,8,8,'#6A4010');px(20,35,8,8,'#6A4010');
+  px(12,38,2,2,C.kGold);px(22,38,2,2,C.kGold);
+  // armour pieces on stand (centre-left)
+  px(50,55,18,5,C.kSilver);  // breastplate
+  px(51,56,16,3,C.kSilD);px(53,57,10,2,C.kGold);
+  px(48,60,22,20,C.kSilver); // stand body
+  px(49,61,20,16,C.kSilD);
+  px(46,79,26,3,C.woodD);    // stand base
+  // old trousers on floor (rejected)
+  px(42,108,18,5,C.trous);px(43,109,16,3,C.kSilD);
+  px(62,106,16,5,C.trous);px(63,107,12,3,C.kSilD);
+  // mirror on wall
+  px(88,18,22,30,'#604010');px(89,19,20,28,'#A8C8D8');
+  px(89,19,20,2,'#C0D8E8');px(89,19,1,28,'#C0D8E8');
+  px(90,19,18,1,'#604010');px(90,46,18,1,'#604010');
+  px(90,32,18,1,'rgba(255,255,255,0.2)');
+  // knight looking in mirror — nervous expression
+  knight(95,82);
+  // reflection in mirror (slightly offset, same knight)
+  ctx.globalAlpha=0.5;
+  px(91,22,16,22,C.kSilver); // rough reflection shape
+  px(93,23,12,18,C.kSilD);px(96,20,5,5,C.kBlonde);
+  ctx.globalAlpha=1.0;
+  // sweat drops
+  pt(117,77,C.sweat);pt(119,74,C.sweat);pt(115,73,C.sweat);
+  // small table with goblet
+  px(135,90,24,4,C.woodD);px(133,94,28,16,C.wood);
+  px(143,82,8,9,C.stoneD);px(144,83,6,7,C.stone);px(141,88,10,2,C.stoneD);
+  // candle on table
+  px(155,84,4,7,C.stoneL);px(156,85,2,5,'#F8F0E0');
+  circ(157,83,2,C.candle);pt(157,81,C.candleO);
+  // letter/invitation on table
+  px(135,86,22,5,'#F5EDD6');px(136,87,20,3,'#E8DCC8');
+  px(138,87,6,1,'#8A7050');px(138,89,10,1,'#8A7050');
+  // shoes being polished
+  px(170,108,16,8,C.stoneDk);px(171,109,14,6,'#1A1008');px(172,110,12,4,'#2A2010');
+  // polishing cloth next to shoe
+  px(188,110,10,6,'#D0C0A0');
+}
+
+function drawS1(){
+  // Arriving at castle gates — evening, grand castle
+  skyGrad(0,75,25,15,45,60,40,80);
+  // stars
+  [[15,8],[30,5],[50,12],[80,4],[100,9],[125,6],[145,11],[170,8],[195,5],[215,12]].forEach(function(s){pt(s[0],s[1],C.star);});
+  circ(200,18,7,C.moonC);circ(203,16,5,C.skyNight);
+  // ground / cobbles
+  cobbles(0,110,W,40);
+  // castle — grand, takes up most of scene
+  // main wall
+  px(20,40,200,85,C.stone);
+  px(20,40,200,5,C.stoneL);
+  // stone texture
+  for(var sy=45;sy<115;sy+=10){
+    var soff=(Math.floor((sy-45)/10)%2===0)?0:15;
+    for(var sx=20+soff;sx<220;sx+=30){
+      px(sx,sy,28,9,C.stoneD);px(sx,sy+9,28,1,C.stoneDk);px(sx+28,sy,1,9,C.stoneDk);
+    }
+  }
+  // left tower
+  px(15,15,45,110,C.stone);
+  for(var ty=20;ty<115;ty+=10){px(15+(Math.floor((ty-20)/10)%2)*12,ty,10,9,C.stoneD);}
+  // left tower battlements
+  for(var bx=15;bx<60;bx+=10){px(bx,10,6,8,C.stone);px(bx,10,6,2,C.stoneL);}
+  // right tower
+  px(180,15,45,110,C.stone);
+  for(var ty2=20;ty2<115;ty2+=10){px(180+(Math.floor((ty2-20)/10)%2)*12,ty2,10,9,C.stoneD);}
+  for(var bx2=180;bx2<225;bx2+=10){px(bx2,10,6,8,C.stone);px(bx2,10,6,2,C.stoneL);}
+  // castle flags
+  px(35,5,2,12,'#8A7050');px(37,5,10,7,C.cFlag);px(37,5,10,3,'#E83030');
+  px(195,5,2,12,'#8A7050');px(197,5,10,7,C.cFlagB);px(197,5,10,3,'#2A5AC0');
+  // gatehouse arch
+  px(85,55,70,70,C.stoneDk);
+  px(87,57,66,68,C.cGateD);
+  // arch top
+  tri(85,55,120,35,155,55,C.stone);
+  tri(87,55,120,37,153,55,C.stoneD);
+  px(88,50,64,6,C.stone);
+  // portcullis bars
+  for(var pb=88;pb<152;pb+=6){px(pb,57,3,68,C.stoneDk);}
+  for(var pbh=57;pbh<115;pbh+=8){px(88,pbh,64,3,C.stoneDk);}
+  // warm light spilling through gate
+  ctx.fillStyle='rgba(255,200,80,0.12)';
+  ctx.beginPath();ctx.moveTo(120,55);ctx.lineTo(88,125);ctx.lineTo(152,125);ctx.fill();
+  // lit windows in towers
+  winLit(22,30,12,10);winLit(40,30,12,10);winLit(22,50,12,10);
+  winLit(186,30,12,10);winLit(204,30,12,10);winLit(186,50,12,10);
+  // torches flanking gate
+  torch(82,58);torch(158,58);
+  // path to gate
+  px(80,110,80,40,C.cobD);
+  for(var py2=112;py2<150;py2+=5){px(80,py2,80,4,C.cobL);}
+  // knight standing before gate, looking up
+  knight(108,112);
+  // helmet off — holding it, looking up in awe
+  // override helmet with bare head (he's gripping helmet)
+  px(108+3,112,12,7,C.kSilver); // re-draw helmet at side
+  // held helmet under arm
+  px(108+15,112+8,10,7,C.kSilver);px(108+16,112+9,8,5,C.kSilD);
+  // sweat drops
+  pt(108+18,112-3,C.sweat);pt(108+20,112-1,C.sweat);
+}
+
+function drawS2(){
+  // Princess opens the door — castle entrance, warm light
+  // evening exterior
+  skyGrad(0,60,20,12,35,50,30,70);
+  [[20,8],[45,5],[70,11],[100,4],[130,9],[160,6],[185,12],[210,7]].forEach(function(s){pt(s[0],s[1],C.star);});
+  circ(210,15,6,C.moonC);circ(213,13,4,C.skyNight);
+  cobbles(0,112,W,38);
+  // castle doorway — grand arched entrance
+  px(50,0,140,150,C.stone);
+  // stone texture on wall
+  for(var sy=0;sy<115;sy+=10){
+    var soff=(Math.floor(sy/10)%2===0)?0:15;
+    for(var sx=50+soff;sx<190;sx+=30){px(sx,sy,28,9,C.stoneD);px(sx,sy+9,28,1,C.stoneDk);}
+  }
+  // door arch
+  px(85,20,70,100,C.cGateD);
+  tri(85,20,120,2,155,20,C.stoneDk);
+  px(86,14,68,7,C.stone);
+  // door frame
+  px(83,18,4,102,C.woodD);px(153,18,4,102,C.woodD);
+  px(83,18,74,4,C.woodD);
+  // door itself (open, warm light)
+  px(87,22,32,98,C.woodD);
+  for(var dp=0;dp<5;dp++){px(89,24+dp*18,28,15,C.wood);px(90,25+dp*18,26,13,'#B07830');}
+  px(113,65,4,4,C.kGold); // door handle
+  // warm interior light spilling out
+  ctx.fillStyle='rgba(255,200,80,0.15)';ctx.fillRect(87,22,32,98);
+  ctx.fillStyle='rgba(255,200,80,0.08)';ctx.fillRect(60,22,90,98);
+  // torch on wall
+  torch(80,40);torch(162,40);
+  // ivy on wall left
+  for(var iv=0;iv<8;iv++){px(52+iv*2,30+iv*5,4,8,'#2A5A10');px(53+iv*2,32+iv*5,3,5,'#3A7818');}
+  for(var iv2=0;iv2<6;iv2++){px(168+iv2,25+iv2*7,4,8,'#2A5A10');}
+  // princess in doorway
+  princess(110,90);
+  // princess laughing — hand near mouth
+  px(124,98,3,3,C.pSkin);
+  // knight at door — nervous, holding helmet
+  knight(60,110);
+  // helmet held in front (both hands gripping it)
+  px(60+1,110+5,16,8,C.kSilver);px(60+2,110+6,14,6,C.kSilD);
+  px(60+3,110+7,10,3,C.kGold);
+  // white knuckles
+  px(60-1,110+8,4,3,'#F0F0F0');px(60+14,110+8,4,3,'#F0F0F0');
+  // sweat drops
+  pt(60+19,110-2,C.sweat);pt(60+21,110-4,C.sweat);pt(60+18,110-5,C.sweat);
+  // speech bubble with "composed"
+  px(30,95,35,14,C.stoneL);px(31,96,33,12,'#F8F4EC');
+  px(48,109,4,4,'#F8F4EC');px(50,109,2,2,'#F8F4EC');
+  ctx.fillStyle='#5A3010';ctx.font='5px serif';ctx.fillText('composed.',33,105);
+}
+
+function drawS3(){
+  // Great hall — meeting the King and Queen
+  // grand interior
+  px(0,0,W,H,C.roomW);
+  // stone walls with tapestries
+  for(var wy=0;wy<H;wy+=8){for(var wx2=0;wx2<W;wx2+=20){px(wx2,wy,18,7,C.roomS);}}
+  // stone floor
+  for(var fx=0;fx<W;fx+=20){
+    px(fx,105,19,45,C.stoneD);px(fx+19,105,1,45,C.stoneDk);
+    px(fx,105,19,1,C.stone);
+  }
+  px(0,105,W,2,'rgba(0,0,0,0.15)');
+  // LEFT WINDOW — clipped to frame only
+  px(5,5,20,65,'#604010');px(6,6,18,63,C.skyNight);
+  ctx.save();ctx.beginPath();ctx.rect(6,6,18,63);ctx.clip();
+  skyGrad(6,69,20,12,35,50,30,70);
+  ctx.restore();
+  px(5,5,20,2,'#604010');px(5,67,20,2,'#604010');px(5,5,2,64,'#604010');px(23,5,2,64,'#604010');px(14,5,2,64,'#604010');px(5,36,20,2,'#604010');
+  pt(10,15,C.star);pt(18,12,C.star);circ(15,22,4,C.moonC);circ(17,20,3,'#2A1428');
+  // RIGHT WINDOW — clipped to frame only
+  px(215,5,20,65,'#604010');px(216,6,18,63,C.skyNight);
+  ctx.save();ctx.beginPath();ctx.rect(216,6,18,63);ctx.clip();
+  skyGrad(6,69,20,12,35,50,30,70);
+  ctx.restore();
+  px(215,5,20,2,'#604010');px(215,67,20,2,'#604010');px(215,5,2,64,'#604010');px(233,5,2,64,'#604010');px(224,5,2,64,'#604010');px(215,36,20,2,'#604010');
+  // tapestry left wall
+  px(32,10,28,55,C.tapestry1);px(33,11,26,53,C.queenRobe);
+  px(34,12,24,4,C.tapestryG);px(34,60,24,4,C.tapestryG);
+  px(34,12,2,51,C.tapestryG);px(56,12,2,51,C.tapestryG);
+  // cross motif on tapestry
+  px(43,25,4,25,C.tapestryG);px(34,33,24,4,C.tapestryG);
+  // tapestry right wall
+  px(180,10,28,55,C.tapestry2);px(181,11,26,53,C.kingRobe);
+  px(182,12,24,4,C.tapestryG);px(182,60,24,4,C.tapestryG);
+  px(182,12,2,51,C.tapestryG);px(204,12,2,51,C.tapestryG);
+  px(190,25,4,25,C.tapestryG);px(182,33,24,4,C.tapestryG);
+  // fireplace centre back
+  px(95,60,50,55,C.stoneDk);px(97,62,46,53,C.cGateD);
+  px(97,62,46,5,C.stoneDk);tri(95,67,120,50,145,67,C.stone);
+  // fire — fills full fireplace opening (x=97..143, y=67..115)
+  px(97,90,46,25,C.cTorchO);
+  px(98,85,44,20,C.cTorchO);
+  px(100,78,10,25,C.cTorch);px(108,72,10,30,C.cTorch);
+  px(116,68,10,32,C.cTorch);px(124,73,10,27,C.cTorch);
+  px(132,79,9,21,C.cTorch);
+  px(104,75,8,20,C.candle);px(113,69,10,26,C.candle);
+  px(123,74,8,22,C.candle);
+  px(110,67,8,18,C.winY);
+  ctx.fillStyle='rgba(255,150,20,0.2)';ctx.fillRect(80,55,80,65);
+  // mantle
+  px(90,60,60,6,C.stone);px(91,61,58,4,C.stoneL);
+  px(102,54,8,8,C.stone);px(130,54,8,8,C.stone);// candle holders on mantle
+  circ(106,53,2,C.candle);circ(134,53,2,C.candle);
+  // torches on walls
+  torch(68,30);torch(172,30);
+  // King in armchair left
+  // armchair
+  px(22,75,25,30,C.chair);px(23,76,23,28,C.chairD);
+  px(22,68,5,35,C.chair);px(42,68,5,35,C.chair);
+  px(22,100,25,5,C.woodD);
+  king(24,65);
+  // wine goblet in king's hand
+  px(38,82,4,6,C.stoneL);px(39,83,2,4,C.stone);px(37,86,6,1,C.stoneL);
+  // Queen in armchair right
+  px(193,75,25,30,C.chair);px(194,76,23,28,C.chairD);
+  px(193,68,5,35,C.chair);px(213,68,5,35,C.chair);
+  px(193,100,25,5,C.woodD);
+  queen(195,58);
+  // knight standing centre — feet aligned with princess (both at y=128), taller via extended torso
+  var knx=108, kny=103;
+  // boots
+  px(knx+3,kny+21,6,4,C.kSilD);px(knx+10,kny+21,6,4,C.kSilD);
+  px(knx+4,kny+22,4,2,'#707880');px(knx+11,kny+22,4,2,'#707880');
+  // legs
+  px(knx+3,kny+14,6,8,C.kSilver);px(knx+10,kny+14,6,8,C.kSilver);
+  px(knx+4,kny+18,4,3,C.kGold);px(knx+11,kny+18,4,3,C.kGold);
+  // arms — from torso top kny+1
+  px(knx,kny+1,3,13,C.kSilver);px(knx+15,kny+1,3,13,C.kSilver);
+  px(knx,kny+10,3,4,C.kSilD);px(knx+15,kny+10,3,4,C.kSilD);
+  // extended torso 13px
+  px(knx+1,kny+1,16,13,C.kSilver);px(knx+4,kny+2,9,11,C.kSilD);
+  px(knx+5,kny+4,6,7,C.kGold);px(knx+6,kny+6,4,3,C.winY);
+  // neck 2px
+  px(knx+6,kny-1,6,2,C.kSkin);
+  // helmet 7px: top kny-8, bottom kny-1
+  px(knx+2,kny-8,14,7,C.kSilver);px(knx+3,kny-7,12,5,C.kSilD);
+  // visor band
+  px(knx+3,kny-5,12,2,C.kGold);px(knx+4,kny-4,10,1,C.winY);
+  // eyes on visor
+  pt(knx+5,kny-4,'#201008');pt(knx+10,kny-4,'#201008');
+  // blonde hair sides
+  px(knx+1,kny-7,2,4,C.kBlonde);px(knx+13,kny-7,2,4,C.kBlonde);
+  // plume
+  px(knx+7,kny-11,3,3,C.kRed);
+  // princess beside knight
+  princess(128,103);
+  // warm glow from fire on characters
+  ctx.fillStyle='rgba(255,150,20,0.06)';ctx.fillRect(90,65,80,85);
+}
+
+function drawS4(){
+  // The dinner table — the fork incident
+  px(0,0,W,H,C.roomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx2=0;wx2<W;wx2+=20){px(wx2,wy,18,7,C.roomS);}}
+  // dark floor
+  for(var fx=0;fx<W;fx+=18){px(fx,108,17,42,C.roomFloorD);px(fx+17,108,1,42,'#604010');}
+  px(0,108,W,2,'rgba(0,0,0,0.2)');
+  // back wall details
+  px(0,0,W,65,C.roomS);
+  // window with curtains
+  px(90,5,60,55,'#604010');px(91,6,58,53,C.skyNight);
+  pt(100,15,C.star);pt(115,10,C.star);pt(130,14,C.star);
+  circ(140,20,5,C.moonC);circ(143,18,4,C.skyNight);
+  px(90,5,10,55,C.curtainR);px(140,5,10,55,C.curtainR);
+  for(var cf=0;cf<55;cf+=8){px(91,5+cf,3,6,'#5A0008');px(141,5+cf,3,6,'#5A0008');}
+  px(98,5,3,55,C.curtainG);px(140,5,3,55,C.curtainG);
+  // painting on wall left
+  px(10,8,40,35,'#604010');px(11,9,38,33,C.bTan);
+  px(12,10,36,2,'#A09070');px(12,40,36,1,'#A09070');
+  px(20,12,20,18,C.skyDusk);circ(26,18,5,C.moonC);px(18,28,24,4,C.grassD);
+  // painting on wall right
+  px(190,8,40,35,'#604010');px(191,9,38,33,C.bCream);
+  px(192,10,36,2,'#A09070');px(192,40,36,1,'#A09070');
+  px(198,12,24,18,C.stone);tri(200,20,210,12,220,20,C.stoneDk);
+  // torches
+  torch(72,15);torch(168,15);
+  // THE DINING TABLE — centrepiece
+  // table legs
+  px(28,90,8,25,C.woodD);px(204,90,8,25,C.woodD);
+  px(70,92,8,22,C.woodD);px(162,92,8,22,C.woodD);
+  // table top
+  px(22,72,196,22,C.woodD);px(24,74,192,18,C.wood);
+  // TABLECLOTH
+  px(20,68,200,28,C.tablecloth);px(22,70,196,24,C.tableclothS);
+  // tablecloth drape sides
+  px(18,68,4,28,C.tablecloth);px(218,68,4,28,C.tablecloth);
+  // tablecloth trim
+  px(18,68,204,2,C.tableD);px(18,94,204,2,C.tableD);
+  // STAIN on tablecloth (the incident!)
+  px(108,76,14,8,C.food);px(110,77,10,6,C.foodD);
+  px(106,79,4,4,C.food);px(120,78,3,4,C.food);
+  px(109,84,8,3,C.food);
+  // plates and candelabra
+  circ(52,74,8,C.plate);circ(52,74,6,C.plateD);  // knight's plate
+  px(48,70,8,3,C.food);  // food on plate
+  circ(188,74,8,C.plate);circ(188,74,6,C.plateD); // princess plate
+  px(184,70,8,3,C.food);
+  // centre candelabra
+  px(116,58,8,15,C.kGold);px(108,68,24,3,C.kGold);
+  px(108,64,6,5,C.kGold);px(122,64,6,5,C.kGold);
+  circ(111,62,2,C.candle);circ(120,62,2,C.candle);circ(115,56,2,C.candle);
+  pt(111,60,C.candleO);pt(120,60,C.candleO);pt(115,54,C.candleO);
+  // goblets
+  px(60,64,5,8,C.stoneL);px(61,65,3,6,C.stone);px(59,70,7,1,C.stoneL);
+  px(175,64,5,8,C.stoneL);px(176,65,3,6,C.stone);px(174,70,7,1,C.stoneL);
+  // cutlery
+  px(40,70,2,10,C.stoneL);px(44,70,3,9,C.stoneL);// knife+fork left
+  px(196,70,2,10,C.stoneL);px(199,70,3,9,C.stoneL);// right
+  // KING at head of table (left end)
+  king(8,68);
+  // QUEEN at right end — moved left to x=204
+  queen(204,68);
+  // KNIGHT seated — both arms resting, no fork raised
+  var kx=38;
+  px(kx+1,50,14,18,C.kSilver);px(kx+3,51,10,14,C.kSilD);
+  px(kx+4,52,7,8,C.kGold);px(kx+5,53,5,5,C.winY);
+  px(kx,50,2,12,C.kSilver);px(kx+13,50,2,12,C.kSilver);
+  // neck
+  px(kx+5,48,6,2,C.kSkin);
+  // helmet 7px
+  px(kx+2,41,12,7,C.kSilver);px(kx+3,42,10,5,C.kSilD);
+  px(kx+3,44,10,2,C.kGold);px(kx+4,45,8,1,C.winY);
+  px(kx+1,42,2,5,C.kBlonde);px(kx+11,42,2,5,C.kBlonde);
+  pt(kx+4,45,'#201008');pt(kx+8,45,'#201008');
+  px(kx+8,43,3,2,C.kGold);
+  px(kx+5,39,2,3,C.kRed);
+  pt(kx+14,40,C.sweat);pt(kx+16,37,C.sweat);
+
+  // PRINCESS seated — suppressing laugh
+  var prx=170;
+  // torso drawn FIRST so hair can paint over right edge
+  px(prx+1,50,14,18,C.pPurp);px(prx+2,51,12,14,C.pPurpL);
+  px(prx,50,2,12,C.pPurp);px(prx+13,50,2,12,C.pPurp);
+  px(prx+5,49,6,1,C.pSkin);
+  // hair drawn AFTER torso — right side now covers torso arm edge
+  px(prx+3,38,10,5,C.pHair);px(prx+4,38,4,3,C.pHairH);
+  px(prx+2,42,2,8,C.pHair);px(prx+13,42,2,8,C.pHair);
+  // face drawn over hair
+  px(prx+3,42,10,7,C.pSkin);
+  pt(prx+5,44,'#201008');pt(prx+9,44,'#201008');
+  px(prx+5,47,5,1,'#A06040');
+  // crown
+  px(prx+4,37,8,2,C.pGold);px(prx+4,36,1,2,C.pGold);px(prx+6,35,3,3,C.pGold);px(prx+10,36,1,2,C.pGold);
+  // hand near mouth
+  px(prx+12,44,3,4,C.pSkin);
+  // napkin — stops well before queen face at x=208
+  px(175,75,28,5,C.napkin);px(176,76,26,3,'#E8E4D4');
+}
+
+function drawS5(){
+  // Courtyard goodbye — torchlight, princess laughing, night
+  skyGrad(0,80,12,8,22,30,18,50);
+  [[15,5],[30,8],[50,3],[75,10],[100,6],[130,4],[155,9],[180,5],[210,7],[225,12]].forEach(function(s){pt(s[0],s[1],C.star);});
+  circ(195,14,8,C.moonC);circ(198,12,6,C.skyNight);
+  // castle walls background
+  px(0,30,W,90,C.stone);
+  for(var sy=35;sy<110;sy+=10){
+    var soff=(Math.floor((sy-35)/10)%2===0)?0:15;
+    for(var sx=soff;sx<W;sx+=30){px(sx,sy,28,9,C.stoneD);px(sx,sy+9,28,1,C.stoneDk);}
+  }
+  // battlements top
+  for(var bx=0;bx<W;bx+=12){px(bx,25,8,8,C.stone);px(bx,25,8,2,C.stoneL);}
+  px(0,33,W,2,C.stoneDk);
+  // cobble floor
+  cobbles(0,110,W,40);
+  // castle door (closed now)
+  px(90,45,60,75,C.woodD);
+  for(var dp=0;dp<4;dp++){px(92,47+dp*18,56,15,C.wood);px(93,48+dp*18,54,13,'#B07830');}
+  px(88,43,4,77,C.cGateD);px(148,43,4,77,C.cGateD);
+  px(88,43,64,4,C.stoneDk);
+  px(116,68,6,6,C.kGold);// door handle
+  tri(88,43,120,28,152,43,C.stoneDk);px(89,38,62,6,C.stone);
+  // lit windows above casting warm light
+  winLit(30,35,18,12);winLit(55,35,18,12);
+  winLit(167,35,18,12);winLit(192,35,18,12);
+  // window glow on ground
+  ctx.fillStyle='rgba(255,200,80,0.07)';
+  ctx.fillRect(28,47,22,60);ctx.fillRect(165,47,22,60);
+  // torches on castle wall flanking door
+  torch(85,55);torch(155,55);
+  // torch light pools on cobbles
+  ctx.fillStyle='rgba(255,180,60,0.1)';
+  ctx.beginPath();ctx.ellipse(86,112,16,6,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(156,112,16,6,0,0,Math.PI*2);ctx.fill();
+  // laughter coming through windows (light flickers implied by warm patches)
+  ctx.fillStyle='rgba(255,220,100,0.06)';ctx.fillRect(28,40,22,20);ctx.fillRect(165,40,22,20);
+  // princess laughing
+  var plx=116, ply=100;
+  px(plx+2,ply+22,14,9,C.pPurp);
+  px(plx,ply+25,18,7,C.pPurpD);
+  px(plx+2,ply+31,14,1,C.pGold);
+  px(plx+4,ply+14,10,8,C.pPurp);px(plx+5,ply+15,8,5,C.pPurpL);
+  px(plx+2,ply+14,3,7,C.pPurp);px(plx+3,ply+20,2,2,C.pSkin);
+  // neck 1px only
+  px(plx+5,ply+12,5,1,C.pSkin);
+  // hair top then sides
+  px(plx+3,ply+3,10,4,C.pHair);px(plx+4,ply+3,4,2,C.pHairH);
+  px(plx+2,ply+6,2,7,C.pHair);
+  px(plx+11,ply+6,2,7,C.pHair);  // right hair at x+11, will be covered by face on left edge only
+  // crown
+  px(plx+3,ply+1,8,2,C.pGold);
+  px(plx+3,ply,1,2,C.pGold);px(plx+6,ply-1,3,3,C.pGold);px(plx+10,ply,1,2,C.pGold);
+  // face 8px wide x+3..x+11, drawn over hair
+  px(plx+3,ply+6,8,6,C.pSkin);
+  pt(plx+5,ply+8,'#201008');pt(plx+8,ply+8,'#201008');
+  px(plx+4,ply+10,5,1,'#C07050');
+
+  // knight — inline, taller, with eyes, shorter neck
+  var kx=78, ky=108;
+  px(kx+3,ky+21,6,4,C.kSilD);px(kx+10,ky+21,6,4,C.kSilD);
+  px(kx+4,ky+22,4,2,'#707880');px(kx+11,ky+22,4,2,'#707880');
+  px(kx+3,ky+14,6,8,C.kSilver);px(kx+10,ky+14,6,8,C.kSilver);
+  px(kx+4,ky+18,4,3,C.kGold);px(kx+11,ky+18,4,3,C.kGold);
+  px(kx,ky-2,3,16,C.kSilver);px(kx+15,ky-2,3,16,C.kSilver);
+  px(kx,ky+10,3,4,C.kSilD);px(kx+15,ky+10,3,4,C.kSilD);
+  px(kx+1,ky-2,16,16,C.kSilver);px(kx+4,ky-1,9,13,C.kSilD);
+  px(kx+5,ky+1,6,8,C.kGold);px(kx+6,ky+3,4,4,C.winY);
+  // neck 1px only
+  px(kx+6,ky-3,6,1,C.kSkin);
+  // helmet 9px: top ky-12, bottom ky-3 — longer helmet = shorter neck gap
+  px(kx+3,ky-12,12,9,C.kSilver);px(kx+4,ky-11,10,7,C.kSilD);
+  px(kx+4,ky-8,10,2,C.kGold);px(kx+5,ky-7,8,1,C.winY);
+  px(kx+2,ky-10,2,6,C.kBlonde);px(kx+13,ky-10,2,6,C.kBlonde);
+  pt(kx+5,ky-7,'#201008');pt(kx+9,ky-7,'#201008');
+  px(kx+8,ky-14,3,3,C.kRed);
+  px(kx+6,ky-1,5,1,'#C07050');
+  // soft warm light between them
+  ctx.fillStyle='rgba(255,200,80,0.06)';ctx.fillRect(88,90,40,30);
+  // knight's shadow on cobbles
+  ctx.fillStyle='rgba(0,0,0,0.15)';
+  ctx.beginPath();ctx.ellipse(86,128,12,4,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(125,128,10,4,0,0,Math.PI*2);ctx.fill();
+}
+
+var scenes = [
+  {label:'A week of quiet, dignified panic',     fn:drawS0, para:0,  paraEnd:5},
+  {label:'The castle gates',                      fn:drawS1, para:6,  paraEnd:7},
+  {label:'A terrified entrance',                  fn:drawS2, para:8,  paraEnd:11},
+  {label:'The King and Queen',                    fn:drawS3, para:12, paraEnd:17},
+  {label:'The spill incident',                    fn:drawS4, para:18, paraEnd:32},
+  {label:'The courtyard goodbye',                 fn:drawS5, para:33, paraEnd:42}
+];
+
+var storyParas = [
+  'There are many things a Knight trains for. Meeting the parents of the woman he loves, it turns out, is not one of them.',
+  '\u201cCome for dinner,\u201d she had said, easily, the way you might suggest stopping for a pastry on the way home. \u201cMy parents would love to meet you.\u201d',
+  'The Knight had said yes. Of course he had said yes. He was brave. He had faced dragons. He had navigated swamps. He had stared down a very stubborn goat on a toll bridge and not flinched once.',
+  'He spent the entire week before dinner in a state of quiet, dignified panic.',
+  'It was not, he told himself firmly, a big deal. They were just her parents. Ordinary people. The fact that her father happened to be the King of Antwerpshire was entirely beside the point. The fact that her mother was the Queen was similarly irrelevant. He was a Knight. He dined with important people all the time.',
+  'He had never actually dined with important people.',
+  'On the evening itself, he arrived at the castle gates precisely on time, having changed his outfit twice and then changed back to the first one, and stood for a moment looking up at the towers and the flags and the general enormity of the whole enterprise. It was a magnificent castle. Grand, beautiful, warm light spilling from tall windows into the evening air.',
+  'He straightened his armour, cleared his throat, and knocked.',
+  'The Princess opened the door herself, which he had not expected, and she was smiling in a way that was entirely warm and also, he noticed, contained just the faintest flicker of anticipation. As if she was already looking forward to something.',
+  '\u201cYou look terrified,\u201d she said cheerfully.',
+  '\u201cI look composed,\u201d said the Knight.',
+  '\u201cYou\u2019re gripping your helmet so hard your knuckles have gone white.\u201d He looked down. They had. He loosened his grip. \u201cCome in,\u201d she said, and he could hear her trying not to laugh, and he followed her inside.',
+  'The King and Queen were in the great hall, and this was the moment the Knight had been mentally preparing for all week \u2014 the formal assessment, the weighing up, the careful parental scrutiny he had been bracing himself against.',
+  'The King looked up from his chair and said, \u201cAh, you must be the Knight. Drink?\u201d',
+  'The Queen smiled and said, \u201cSit down, sit down, dinner\u2019s nearly ready.\u201d',
+  'And that was that.',
+  'There was no scrutiny. No formal assessment. No weighing up. They were just \u2014 people. Warm, normal, completely unbothered people who happened to live in a very large castle and seemed entirely uninterested in making him feel anything other than welcome.',
+  'This, somehow, did not make the Knight less nervous. If anything, it made him more nervous, in the specific way that happens when you have prepared extensively for a storm and the weather turns out to be perfectly pleasant and you have no idea what to do with all that prepared nervousness.',
+  'He directed it, mostly, at the dinner table.',
+  'The table was long and beautifully set, with a white tablecloth so pristine it seemed to be daring someone to ruin it. The Knight sat down, placed his hands carefully in his lap, and resolved to be perfectly normal.',
+  'The King talked about the kingdom. The Queen asked pleasant questions. The Princess sat across from him, composed and attentive, though she had adopted a particular expression the Knight was beginning to recognise \u2014 chin slightly down, eyes slightly bright, the expression of someone sitting on a laugh and sitting on it very firmly indeed.',
+  'He was doing well. He was being perfectly normal. The conversation flowed, the wine was poured, and the main course arrived \u2014 a magnificent roast, fit for, well, a king.',
+  '\u201cSo,\u201d said the King pleasantly, \u201chow did you two first meet?\u201d',
+  'It was a simple question. A friendly question. The Knight had the answer ready \u2014 he had thought about this, he knew this story, he had lived this story \u2014 and he opened his mouth to tell it while simultaneously lifting his fork toward his mouth and misjudging the distance between the two by quite a significant margin.',
+  'The fork arrived. His mouth did not. A portion of the main course, caught in the middle of this miscommunication, made a dignified descent onto the white tablecloth.',
+  'There was a brief silence.',
+  '\u201cWe met\u2014\u201d said the Knight, with tremendous composure, as if nothing had happened. He did not look down. He looked directly at the King with the focused expression of a man who has decided that if he does not acknowledge something, it will cease to exist. He told the story carefully, calmly, and at no point mentioned the fork.',
+  'The King nodded warmly. \u201cWonderful.\u201d',
+  'The Queen reached over and placed a napkin gently over the affected area of the tablecloth, with the serene efficiency of someone who had seen far stranger things and was not going to make a fuss about any of them. She said nothing. She simply smiled and refilled his glass.',
+  'The Knight finally allowed himself to glance at the Princess.',
+  'She was staring very intently at a spot somewhere above his left shoulder. Her jaw was tight. Her eyes were watering very slightly. She was, by any reasonable measure, about thirty seconds from completely losing the battle she was currently fighting with herself.',
+  'He looked away quickly.',
+  'Dinner continued. The King and Queen asked more questions, laughed easily, told stories of their own, and treated the Knight throughout with a warmth so genuine and uncomplicated that by the time dessert arrived he had almost \u2014 almost \u2014 relaxed.',
+  'It was only later, walking back through the castle courtyard toward the gate, that the Princess finally let it out \u2014 a laugh she had clearly been saving for some time, bright and helpless and completely delighted.',
+  '\u201cYou missed your own mouth,\u201d she said.',
+  '\u201cThe fork was at an unusual angle,\u201d said the Knight.',
+  '\u201cIt was a completely normal angle.\u201d',
+  '\u201cI was gesturing.\u201d',
+  '\u201cYou weren\u2019t gesturing. You were just nervous.\u201d',
+  'He wanted to argue. He considered arguing. He looked at her laughing in the warm light of the courtyard torches and found that he didn\u2019t want to argue at all, actually. He wanted to remember this \u2014 her laughing, the castle behind her, the night air, the way this felt.',
+  '\u201cThey liked you, you know,\u201d she said, once she\u2019d recovered. \u201cThey really did.\u201d \u201cI spilled food on their tablecloth.\u201d \u201cThey didn\u2019t care even slightly.\u201d',
+  'He thought about the King\u2019s easy questions, the Queen\u2019s quiet napkin, the way neither of them had made him feel anything other than welcome from the very first moment. \u201cNo,\u201d he said. \u201cI suppose they didn\u2019t.\u201d',
+  'The Princess smiled at him \u2014 not the almost-laughing smile from across the dinner table, but a softer one, the kind that meant something. He walked her back to the castle door, said goodnight, and made his way home through the lamplit streets of Antwerpshire feeling, despite everything, like the evening had gone rather well. Behind him, through the tall castle windows, he could hear laughter. He smiled all the way home.'
+];
+
+window.onload = function(){
+  var textEl = document.getElementById('story-text');
+  for(var pi=0; pi<storyParas.length; pi++){
+    var pel = document.createElement('p');
+    pel.id = 'para'+pi;
+    pel.textContent = storyParas[pi];
+    textEl.appendChild(pel);
+  }
+  var dotsRow = document.getElementById('dots-row');
+  for(var d=0; d<scenes.length; d++){
+    var de = document.createElement('div');
+    de.className = 'dot'+(d===0?' on':'');
+    dotsRow.appendChild(de);
+  }
+  var cur = 0;
+  function render(i){
+    ctx.clearRect(0,0,W,H);
+    scenes[i].fn();
+    document.getElementById('scene-name').textContent = scenes[i].label;
+    document.getElementById('prev').disabled = (i===0);
+    document.getElementById('next').disabled = (i===scenes.length-1);
+    var allDots = document.querySelectorAll('.dot');
+    for(var j=0;j<allDots.length;j++) allDots[j].classList.toggle('on',j===i);
+    var allP = document.querySelectorAll('#story-text p');
+    for(var k=0;k<allP.length;k++) allP[k].classList.remove('hl');
+    for(var h=scenes[i].para;h<=scenes[i].paraEnd;h++){
+      if(allP[h]) allP[h].classList.add('hl');
+    }
+    if(allP[scenes[i].para]) allP[scenes[i].para].scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  document.getElementById('prev').onclick = function(){if(cur>0){cur--;render(cur);}};
+  document.getElementById('next').onclick = function(){if(cur<scenes.length-1){cur++;render(cur);}};
+  sizeCanvas();
+  render(0);
+  window.addEventListener('resize', sizeCanvas);
+};
+</script>
+</body>
+</html>

@@ -33,6 +33,10 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
 #story-scroll::-webkit-scrollbar-thumb{background:#C8A860;border-radius:3px;}
 #story-text p{font-family:Georgia,serif;font-size:14px;line-height:1.9;color:#3A2010;margin-bottom:0.9em;}
 #story-text p.hl{background:#FFF0B0;border-left:2px solid #C8A040;padding:2px 6px;border-radius:0 2px 2px 0;}
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
 </style>
 </head>
 <body>
@@ -41,7 +45,7 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
     <div style="flex:0 0 80px"></div>
     <div id="title-text">The Goofy Knight and the Silly Princess</div>
     <div style="flex:0 0 80px;display:flex;justify-content:flex-end;">
-      <button id="next-chapter-btn">Next chapter &rarr;</button>
+      <button id="next-chapter-btn"><a href="chapter2.html">Next chapter &rarr;</a></button>
     </div>
   </div>
   <div id="main">
