@@ -1,6 +1,6 @@
 # Title: The Goofy Knight and the Silly Princess
 
-# Chapter 2: In which the Knight arrives at the castle, the Princess tries not to giggle, and the tablecloth receives an uninvited portion of the main course
+# Chapter 2: In which the tablecloth receives an uninvited portion of the main course
 
 There are many things a Knight trains for. Meeting the parents of the woman he loves, it turns out, is not one of them.
 
