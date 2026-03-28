@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Goofy Knight and the Silly Princess</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:#2C1A0E;}
+#app{display:flex;flex-direction:column;width:100%;height:100%;background:#2C1A0E;}
+#story-title{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #4A2E10;flex-shrink:0;}
+#title-text{font-family:Georgia,serif;font-style:italic;font-size:15px;color:#F0D8A8;letter-spacing:0.08em;flex:1;text-align:center;}
+#prev-chapter-btn{font-family:Georgia,serif;font-size:12px;background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#prev-chapter-btn:hover{background:#5A3A18;}
+#next-chapter-btn{font-family:Georgia,serif;font-size:12px;background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;padding:5px 12px;cursor:pointer;white-space:nowrap;}
+#next-chapter-btn:hover{background:#5A3A18;}
+#main{display:flex;flex-direction:row;flex:1;min-height:0;}
+#left{flex:0 0 62%;display:flex;flex-direction:column;border-right:1px solid #4A2E10;min-width:0;}
+#canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;background:#1E1008;min-height:0;overflow:hidden;}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;}
+#scene-bar{padding:7px 14px;background:#3A1F08;border-top:1px solid #4A2E10;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+#scene-name{font-family:Georgia,serif;font-size:12px;color:#E8C890;font-style:italic;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#nav-btns{display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.nbtn{background:#4A2E10;border:1px solid #6A4520;border-radius:3px;color:#E8C890;font-family:Georgia,serif;font-size:12px;padding:4px 12px;cursor:pointer;}
+.nbtn:hover{background:#5A3A18;}
+.nbtn:disabled{opacity:0.3;cursor:default;}
+#dots-row{display:flex;gap:4px;}
+.dot{width:5px;height:5px;border-radius:50%;background:#6A4520;}
+.dot.on{background:#E8C890;}
+#right{flex:1;display:flex;flex-direction:column;background:#F5EDD6;overflow:hidden;min-width:0;}
+#text-header{padding:12px 16px 10px;border-bottom:1px solid #D4C0A0;flex-shrink:0;}
+#text-chapter-label{font-family:Georgia,serif;font-size:11px;font-style:italic;color:#8B5E2A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:3px;}
+#text-chapter-title{font-family:Georgia,serif;font-size:13px;font-style:italic;color:#5A3010;font-weight:bold;}
+#story-scroll{flex:1;overflow-y:auto;padding:14px 16px;min-height:0;scrollbar-width:thin;scrollbar-color:#C8A860 #F5EDD6;}
+#story-scroll::-webkit-scrollbar{width:5px;}
+#story-scroll::-webkit-scrollbar-thumb{background:#C8A860;border-radius:3px;}
+#story-text p{font-family:Georgia,serif;font-size:14px;line-height:1.9;color:#3A2010;margin-bottom:0.9em;}
+#story-text p.hl{background:#FFF0B0;border-left:2px solid #C8A040;padding:2px 6px;border-radius:0 2px 2px 0;}
+a{color:inherit;text-decoration:inherit;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="story-title">
+    <div style="flex:0 0 110px;display:flex;justify-content:flex-start;">
+      <a href="chapter2.html"><button id="prev-chapter-btn">&larr; Previous chapter</button></a>
+    </div>
+    <div id="title-text">The Goofy Knight and the Silly Princess</div>
+    <div style="flex:0 0 110px;display:flex;justify-content:flex-end;">
+      <button id="next-chapter-btn">Next chapter &rarr;</button>
+    </div>
+  </div>
+  <div id="main">
+    <div id="left">
+      <div id="canvas-wrap"><canvas id="c"></canvas></div>
+      <div id="scene-bar">
+        <div id="scene-name"></div>
+        <div id="nav-btns">
+          <button class="nbtn" id="prev">&#8592;</button>
+          <div id="dots-row"></div>
+          <button class="nbtn" id="next">&#8594;</button>
+        </div>
+      </div>
+    </div>
+    <div id="right">
+      <div id="text-header">
+        <div id="text-chapter-label">Chapter III</div>
+        <div id="text-chapter-title">The Curse of Ghenta the Grim</div>
+      </div>
+      <div id="story-scroll"><div id="story-text"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+var W = 240, H = 150;
+canvas.width = W; canvas.height = H;
+
+function sizeCanvas(){
+  var wrap = document.getElementById('canvas-wrap');
+  var aw = wrap.clientWidth - 16, ah = wrap.clientHeight - 16;
+  var scale = Math.min(Math.floor(aw/W), Math.floor(ah/H));
+  if(scale < 1) scale = 1;
+  canvas.style.width = (W*scale)+'px';
+  canvas.style.height = (H*scale)+'px';
+}
+
+var C = {
+  // sky / night
+  skyNight:'#12101E', skyEve:'#1E1428', skyDusk:'#2A1E38',
+  skyGrey:'#2A2A30', skyGreyD:'#1A1A20',
+  moonC:'#FFF0C0', star:'#FFFACC',
+  // ground / cobbles
+  cobL:'#C8B898', cobD:'#A09070', cobLine:'#806040',
+  cobGrey:'#909090', cobGreyD:'#707070', cobGreyLine:'#505050',
+  grassG:'#5CA840', grassD:'#3E8228',
+  // buildings warm (Antwerpshire)
+  bCream:'#F0DFB8', bTan:'#DCC898', bDark:'#9A8050',
+  roofR:'#C03020', roofB:'#7A3800',
+  winY:'#FFE870', winO:'#FFB840',
+  doorB:'#7A4A28', wood:'#D4A860', woodD:'#8A6020',
+  // buildings grey (Ghentmoor)
+  greyW:'#888888', greyD:'#666666', greyL:'#AAAAAA',
+  greyRoof:'#555555', greyWin:'#4A5060', greyWinD:'#363C48',
+  // castle / stone
+  stone:'#C0B090', stoneD:'#A09070', stoneL:'#D8C8A0', stoneDk:'#807050',
+  cFlag:'#C83020', cFlagB:'#1A3A80',
+  cGate:'#5A3808', cGateD:'#3A2005',
+  cTorch:'#FFD060', cTorchO:'#FF8020',
+  // Old University (grey stone, joyless)
+  uniW:'#8A8878', uniD:'#6A6858', uniL:'#AAAAAA',
+  uniWin:'#303840', uniWinD:'#20282E',
+  // interior
+  roomW:'#EDD8A8', roomS:'#D4BC88', roomFloor:'#C8A060', roomFloorD:'#8A6820',
+  greyRoomW:'#C0BCAC', greyRoomS:'#A8A498', greyRoomFloor:'#989080', greyRoomFloorD:'#787068',
+  tableW:'#F8F4EC', tableC:'#E0D8C8', tableD:'#C0B898',
+  laundry1:'#E8E4DC', laundry2:'#D8D4CC', laundry3:'#F0EDE8',
+  chair:'#8A5020', chairD:'#6A3810',
+  candle:'#FFE870', candleO:'#FF9020',
+  // characters
+  kSilver:'#C8D0DC', kSilD:'#9AA2B0', kGold:'#D8B840',
+  kBlonde:'#F8C838', kBlondeD:'#D0980C',
+  kSkin:'#F8C8A0', kSkinS:'#E0A070', kRed:'#C83020',
+  pHair:'#3A1800', pHairH:'#622808',
+  pSkin:'#FCCCA0', pSkinS:'#E8A870',
+  pPurp:'#7830C0', pPurpL:'#A060E0', pPurpD:'#501890', pGold:'#D8A010',
+  // Ghenta the witch
+  witchRobe:'#2A2A3A', witchRobeL:'#3A3A4E', witchRobeD:'#1A1A28',
+  witchHair:'#1A1A1A', witchSkin:'#C8A888', witchSkinS:'#A88860',
+  staffW:'#4A3010', staffD:'#2A1808',
+  staffGlow:'#8020E0', staffGlowL:'#C060FF',
+  // frog (Francois)
+  frogG:'#4A9030', frogGD:'#2A6018', frogGL:'#6AB840',
+  frogBelly:'#A8C870', frogEye:'#F0C820',
+  // horse
+  horseB:'#7A4A20', horseBD:'#5A3010', horseL:'#A06830',
+  horseMane:'#3A1808', horseHoof:'#3A3020',
+  // lamp / environment
+  lpost:'#604818', lamp:'#FFE890',
+  trous:'#C8D4E0', sweat:'#A0C8E0',
+  napkin:'#F0ECD8',
+};
+
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function pt(x,y,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),1,1);}
+function circ(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function tri(x1,y1,x2,y2,x3,y3,c){ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.fill();}
+function skyGrad(y0,y1,r0,g0,b0,r1,g1,b1){
+  for(var y=y0;y<y1;y++){
+    var t=(y-y0)/(y1-y0);
+    ctx.fillStyle='rgb('+Math.round(r0+(r1-r0)*t)+','+Math.round(g0+(g1-g0)*t)+','+Math.round(b0+(b1-b0)*t)+')';
+    ctx.fillRect(0,y,W,1);
+  }
+}
+function cobbles(x,y,w,h){
+  px(x,y,w,h,C.cobL);
+  for(var cy=y;cy<y+h;cy+=5){
+    var off=(Math.floor((cy-y)/5)%2===0)?0:4;
+    for(var cx2=x+off;cx2<x+w;cx2+=9){
+      px(cx2,cy,7,4,C.cobD);px(cx2,cy+4,7,1,C.cobLine);px(cx2+7,cy,1,4,C.cobLine);
+    }
+  }
+}
+function cobGrey(x,y,w,h){
+  px(x,y,w,h,C.cobGrey);
+  for(var cy=y;cy<y+h;cy+=5){
+    var off=(Math.floor((cy-y)/5)%2===0)?0:4;
+    for(var cx2=x+off;cx2<x+w;cx2+=9){
+      px(cx2,cy,7,4,C.cobGreyD);px(cx2,cy+4,7,1,C.cobGreyLine);px(cx2+7,cy,1,4,C.cobGreyLine);
+    }
+  }
+}
+function winLit(x,y,w,h){
+  px(x,y,w,h,'#604010');px(x+1,y+1,w-2,h-2,C.winY);
+  px(x+1,y+1,w-2,2,C.winO);px(x+1,y+1,1,h-2,'#FFF8B0');
+  px(x+(w>>1),y,1,h,'#604010');px(x,y+(h>>1),w,1,'#604010');
+}
+function torch(x,y){
+  px(x,y,3,10,C.woodD);px(x-1,y,5,3,C.woodD);
+  circ(x+1,y-1,3,C.cTorch);circ(x+1,y-1,2,C.cTorchO);pt(x+1,y-3,C.candle);
+  ctx.fillStyle='rgba(255,180,60,0.1)';ctx.beginPath();ctx.ellipse(x+1,y+2,8,5,0,0,Math.PI*2);ctx.fill();
+}
+
+// Knight sprite (consistent with ch1/ch2)
+function knight(x,y){
+  px(x+3,y+21,6,4,C.kSilD);px(x+10,y+21,6,4,C.kSilD);
+  px(x+4,y+22,4,2,'#707880');px(x+11,y+22,4,2,'#707880');
+  px(x+3,y+14,6,8,C.kSilver);px(x+10,y+14,6,8,C.kSilver);
+  px(x+4,y+18,4,3,C.kGold);px(x+11,y+18,4,3,C.kGold);
+  px(x+2,y+20,3,2,C.kSilD);px(x+14,y+20,3,2,C.kSilD);
+  px(x+1,y+8,16,7,C.kSilver);px(x+4,y+9,9,5,C.kSilD);
+  px(x+5,y+10,6,3,C.kGold);px(x+6,y+11,4,1,C.winY);
+  px(x,y+8,3,7,C.kSilver);px(x+15,y+8,3,7,C.kSilver);
+  px(x,y+14,3,4,C.kSilD);px(x+15,y+14,3,4,C.kSilD);
+  px(x+6,y+6,6,3,C.kSkin);
+  px(x+3,y,12,7,C.kSilver);px(x+4,y+1,10,5,C.kSilD);
+  px(x+4,y+3,10,3,C.kGold);px(x+5,y+4,8,1,C.winY);
+  px(x+2,y+3,3,5,C.kBlonde);px(x+13,y+3,3,5,C.kBlonde);
+  px(x+2,y+2,2,2,C.kBlondeD);px(x+14,y+2,2,2,C.kBlondeD);
+  px(x+8,y-2,3,2,C.kRed);
+  pt(x+7,y+5,'#201008');pt(x+11,y+5,'#201008');
+}
+
+// Princess sprite
+function princess(x,y){
+  px(x+2,y+16,14,9,C.pPurp);px(x,y+19,18,7,C.pPurpD);
+  px(x+2,y+24,14,1,C.pGold);
+  px(x+1,y+22,2,3,C.pPurpD);px(x+15,y+22,2,3,C.pPurpD);
+  px(x+4,y+9,10,8,C.pPurp);px(x+5,y+10,8,5,C.pPurpL);
+  px(x+2,y+10,3,6,C.pPurp);px(x+13,y+10,3,6,C.pPurp);
+  px(x+3,y+14,2,3,C.pSkin);px(x+13,y+14,2,3,C.pSkin);
+  px(x+6,y+7,6,3,C.pSkin);
+  px(x+4,y+1,10,7,C.pSkin);
+  pt(x+6,y+3,'#201008');pt(x+10,y+3,'#201008');
+  px(x+6,y+5,4,1,C.pSkinS);
+  px(x+4,y-3,10,5,C.pHair);px(x+5,y-3,4,3,C.pHairH);
+  px(x+3,y+1,2,8,C.pHair);px(x+13,y+1,2,8,C.pHair);
+  px(x+5,y-4,8,2,C.pGold);
+  px(x+5,y-5,1,2,C.pGold);px(x+7,y-6,3,3,C.pGold);px(x+11,y-5,1,2,C.pGold);
+}
+
+// Frog (François) — small, green, self-possessed
+function francois(x,y){
+  // body
+  px(x+1,y+4,8,5,C.frogG);px(x+2,y+5,6,3,C.frogGL);
+  // belly
+  px(x+2,y+6,6,3,C.frogBelly);
+  // head
+  px(x+1,y+1,8,4,C.frogG);px(x+2,y+2,6,2,C.frogGL);
+  // eyes
+  circ(x+2,y+1,1,C.frogG);circ(x+8,y+1,1,C.frogG);
+  pt(x+2,y+1,C.frogEye);pt(x+8,y+1,C.frogEye);
+  // mouth — slight smirk
+  pt(x+4,y+4,'#1A5010');pt(x+5,y+4,'#1A5010');pt(x+6,y+5,'#1A5010');
+  // front legs
+  px(x,y+6,2,3,C.frogG);px(x+8,y+6,2,3,C.frogG);
+  px(x-1,y+8,3,1,C.frogGD);px(x+8,y+8,3,1,C.frogGD);
+  // back legs
+  px(x,y+8,3,3,C.frogGD);px(x+7,y+8,3,3,C.frogGD);
+}
+
+// Witch Ghenta — tall, angular, staff
+function ghenta(x,y){
+  // robe — tall and angular
+  px(x+2,y+12,14,26,C.witchRobe);px(x+3,y+13,12,22,C.witchRobeL);
+  px(x,y+15,3,20,C.witchRobe);px(x+15,y+15,3,20,C.witchRobe);
+  // pointed hat base and brim
+  px(x+1,y+5,16,4,C.witchRobeD);
+  // hat cone
+  tri(x+4,y-8,x+9,y-16,x+14,y+5,C.witchRobeD);
+  // arms — bony
+  px(x,y+12,3,10,C.witchRobe);px(x+15,y+12,3,10,C.witchRobe);
+  px(x,y+20,3,3,C.witchSkin);px(x+15,y+20,3,3,C.witchSkin);
+  // neck
+  px(x+6,y+9,5,3,C.witchSkin);
+  // face — angular, dissatisfied
+  px(x+4,y+3,10,7,C.witchSkin);
+  pt(x+6,y+5,'#201008');pt(x+10,y+5,'#201008');
+  px(x+5,y+7,7,1,C.witchSkinS); // frown
+  pt(x+5,y+7,'#806050');pt(x+11,y+7,'#806050');// downturned corners
+  // grey stringy hair
+  px(x+3,y+3,2,8,C.witchHair);px(x+13,y+3,2,8,C.witchHair);
+  px(x+4,y+3,10,2,C.witchHair);
+  // staff (held in right hand)
+  px(x+16,y+8,2,30,C.staffW);px(x+17,y+8,1,30,C.staffD);
+  // staff orb top
+  circ(x+17,y+7,4,C.staffGlow);circ(x+17,y+7,2,C.staffGlowL);
+  pt(x+17,y+5,C.staffGlowL);
+  // glow aura around staff orb
+  ctx.fillStyle='rgba(128,20,220,0.18)';ctx.beginPath();ctx.ellipse(x+17,y+7,7,7,0,0,Math.PI*2);ctx.fill();
+}
+
+// Horse (for riding scene)
+function horse(x,y){
+  // body
+  px(x+5,y+8,28,14,C.horseB);px(x+7,y+9,24,11,C.horseL);
+  // neck
+  px(x+28,y+2,10,12,C.horseB);px(x+29,y+3,8,10,C.horseL);
+  // head
+  px(x+34,y,10,9,C.horseB);px(x+35,y+1,8,7,C.horseL);
+  pt(x+39,y+3,'#201008'); // eye
+  // mane
+  px(x+28,y+1,5,4,C.horseMane);px(x+30,y,4,3,C.horseMane);
+  // tail
+  px(x+3,y+8,4,5,C.horseMane);px(x+1,y+11,4,8,C.horseMane);px(x,y+14,3,6,C.horseMane);
+  // legs — trotting pose
+  px(x+9,y+20,4,12,C.horseB);px(x+14,y+21,4,11,C.horseB);
+  px(x+20,y+20,4,12,C.horseB);px(x+25,y+21,4,11,C.horseB);
+  px(x+9,y+30,4,3,C.horseHoof);px(x+14,y+31,4,2,C.horseHoof);
+  px(x+20,y+30,4,3,C.horseHoof);px(x+25,y+31,4,2,C.horseHoof);
+  // nostril
+  pt(x+42,y+5,C.horseBD);
+  // saddlecloth
+  px(x+12,y+9,14,8,C.kRed);px(x+13,y+10,12,6,C.kGold);
+}
+
+// ---- SCENES ----
+
+// Scene 0: The empty room — Princess is gone
+function drawS0(){
+  // Antwerpshire castle interior — cold morning light
+  px(0,0,W,H,C.roomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.roomS);}}
+  // floor
+  for(var fx=0;fx<W;fx+=14){px(fx,108,13,42,C.roomFloor);px(fx+13,108,1,42,C.roomFloorD);}
+  px(0,108,W,2,'rgba(0,0,0,0.1)');
+  // window — pale morning light (not the warm evening)
+  px(W-55,10,40,55,'#604010');
+  ctx.save();ctx.beginPath();ctx.rect(W-54,11,38,53);ctx.clip();
+  // cool pale morning sky
+  for(var gy=11;gy<64;gy++){
+    var t=(gy-11)/53;
+    ctx.fillStyle='rgb('+Math.round(160+t*30)+','+Math.round(175+t*25)+','+Math.round(195+t*20)+')';
+    ctx.fillRect(0,gy,W,1);
+  }
+  ctx.restore();
+  px(W-55,10,40,2,'#604010');px(W-55,63,40,2,'#604010');
+  px(W-55,10,2,55,'#604010');px(W-17,10,2,55,'#604010');
+  px(W-36,10,2,55,'#604010');px(W-55,37,40,2,'#604010');
+  // pale glow through window onto floor (no warmth)
+  ctx.fillStyle='rgba(180,190,210,0.09)';ctx.fillRect(W-55,10,40,110);
+  // BED — side view, headboard left, footboard right
+  // bed frame
+  px(18,72,108,40,C.woodD);px(20,74,104,36,C.wood);
+  // headboard — tall, left side
+  px(14,45,14,67,C.woodD);px(15,46,12,65,C.wood);
+  px(15,46,12,3,C.woodD); // top rail
+  px(19,52,4,18,C.woodD);px(23,52,4,18,C.woodD); // vertical slats
+  // finials on headboard posts
+  circ(16,45,3,C.kGold);circ(26,45,3,C.kGold);
+  // footboard — shorter, right side
+  px(122,75,12,37,C.woodD);px(123,76,10,35,C.wood);
+  px(123,76,10,3,C.woodD); // top rail
+  px(125,82,3,12,C.woodD);px(129,82,3,12,C.woodD); // slats
+  circ(124,75,3,C.kGold);circ(132,75,3,C.kGold);
+  // mattress (on top of frame)
+  px(22,68,100,8,C.laundry1);px(22,68,100,2,'#F4F0E8'); // mattress top highlight
+  px(22,68,2,8,C.laundry2);px(120,68,2,8,C.laundry2);  // mattress sides
+  // PILLOW — left side, slightly disturbed
+  px(24,62,32,10,C.laundry1);px(25,63,30,8,'#EEEAE2');
+  px(24,62,32,2,'#F4F0E8'); // pillow top highlight
+  circ(38,68,4,'#E0DCD4'); // head indent in pillow
+  // COVERS — thrown back to the right, rumpled
+  // main cover bulk — piled up centre-right
+  px(55,63,62,14,C.laundry2);px(56,64,60,12,C.laundry3);
+  px(58,63,58,3,C.laundry1); // top fold highlight
+  // thrown-back fold (crumple where it was pulled off)
+  px(52,67,20,10,C.laundry3);px(53,68,18,8,C.laundry1);
+  px(62,70,30,8,C.laundry2);px(80,65,26,10,C.laundry3);
+  // trailing edge of cover hanging off right side of bed
+  px(112,72,10,18,C.laundry2);px(113,73,8,16,C.laundry3);
+  // nightstand — right of bed
+  px(140,85,26,28,C.woodD);px(141,86,24,26,C.wood);
+  px(140,110,26,3,C.woodD);
+  // drawer pull
+  px(151,100,4,2,C.kGold);
+  // candle on nightstand — unlit (she left in a hurry)
+  px(148,80,4,6,C.stoneL);px(149,81,2,5,'#F0ECE0');
+  pt(150,80,C.laundry2); // unlit wick
+  // crown on nightstand — left behind
+  px(154,79,12,3,C.pGold);px(154,78,2,2,C.pGold);px(157,77,3,3,C.pGold);px(164,78,2,2,C.pGold);
+  // mist / unpleasant smell trace (damp stone and old ambition)
+  ctx.fillStyle='rgba(100,110,130,0.07)';ctx.fillRect(0,80,120,70);
+  ctx.fillStyle='rgba(100,110,130,0.04)';ctx.fillRect(0,50,160,40);
+  // question mark floating
+  ctx.fillStyle='#8A7050';ctx.font='bold 14px serif';ctx.fillText('?',148,88);
+  ctx.fillStyle='#8A7050';ctx.font='bold 10px serif';ctx.fillText('?',158,78);
+  ctx.fillStyle='#8A7050';ctx.font='bold 8px serif';ctx.fillText('?',166,90);
+  // caption text area
+  ctx.fillStyle='rgba(60,30,10,0.08)';ctx.fillRect(0,0,W,H);
+}
+
+// Scene 1: Ghentmoor — grey city, Old University
+function drawS1(){
+  // Grey overcast sky
+  for(var gy=0;gy<70;gy++){
+    var t=gy/70;
+    ctx.fillStyle='rgb('+Math.round(80+t*30)+','+Math.round(82+t*30)+','+Math.round(90+t*30)+')';
+    ctx.fillRect(0,gy,W,1);
+  }
+  // grey cobblestones
+  cobGrey(0,112,W,38);
+  // grey city buildings background
+  // building row — all muted greys
+  var bldgs=[
+    {x:0,y:50,w:38,h:70,roof:40,c:C.greyW,cd:C.greyD},
+    {x:35,y:58,w:30,h:62,roof:46,c:C.greyL,cd:C.greyW},
+    {x:60,y:45,w:42,h:75,roof:33,c:C.greyD,cd:C.greyW},
+    {x:148,y:52,w:34,h:68,roof:40,c:C.greyW,cd:C.greyD},
+    {x:178,y:44,w:38,h:76,roof:32,c:C.greyL,cd:C.greyW},
+    {x:210,y:56,w:30,h:64,roof:44,c:C.greyD,cd:C.greyL},
+  ];
+  bldgs.forEach(function(b){
+    px(b.x,b.y,b.w,b.h,b.c);
+    px(b.x,b.y,b.w,3,b.cd);
+    tri(b.x,b.y,b.x+b.w/2,b.roof,b.x+b.w,b.y,C.greyRoof);
+    // dim windows
+    for(var wi=0;wi<2;wi++){
+      px(b.x+5+wi*12,b.y+10,7,8,C.greyWin);px(b.x+6+wi*12,b.y+11,5,6,C.greyWinD);
+    }
+  });
+  // THE OLD UNIVERSITY — centrepiece, vast and crumbling
+  px(82,20,76,100,C.uniW);px(84,22,72,98,C.uniD);
+  // stone texture
+  for(var sy=22;sy<112;sy+=8){
+    var soff=(Math.floor((sy-22)/8)%2===0)?0:10;
+    for(var sx=84+soff;sx<156;sx+=22){px(sx,sy,20,7,C.uniL);px(sx,sy+7,20,1,'#505048');}
+  }
+  // towers
+  px(78,10,22,110,C.uniW);px(80,12,18,108,C.uniD);
+  px(152,10,22,110,C.uniW);px(154,12,18,108,C.uniD);
+  // battlements — crumbling (irregular)
+  for(var bx=78;bx<100;bx+=8){if(bx!==86)px(bx,5,5,7,C.uniW);}
+  for(var bx2=152;bx2<174;bx2+=8){if(bx2!==160)px(bx2,5,5,7,C.uniW);}
+  for(var bx3=82;bx3<158;bx3+=10){if(bx3!==112)px(bx3,15,6,7,C.uniW);}
+  // crumbled battlement
+  px(86,8,4,4,C.uniD); // gap / crumbled piece
+  // dim windows — joyless
+  px(88,30,10,12,C.uniWin);px(89,31,8,10,C.uniWinD);
+  px(142,30,10,12,C.uniWin);px(143,31,8,10,C.uniWinD);
+  px(88,55,10,14,C.uniWin);px(89,56,8,12,C.uniWinD);
+  px(142,55,10,14,C.uniWin);px(143,56,8,12,C.uniWinD);
+  px(108,28,24,18,C.uniWin);px(109,29,22,16,C.uniWinD);
+  px(108,55,24,18,C.uniWin);px(109,56,22,16,C.uniWinD);
+  // grand entrance arch — grim
+  px(100,72,40,50,C.stoneDk);px(102,74,36,48,C.uniWinD);
+  tri(100,72,120,58,140,72,C.uniD);
+  px(101,66,38,8,C.uniW);
+  // iron door
+  px(103,75,34,47,'#2A2828');
+  for(var dp=0;dp<3;dp++){px(105,77+dp*14,12,11,'#222020');px(123,77+dp*14,12,11,'#222020');}
+  px(118,95,4,5,'#555050'); // grim door handle
+  // drooping flag — grey
+  px(97,2,2,14,'#8A7050');px(99,3,10,8,C.greyD);
+  px(158,2,2,14,'#8A7050');px(160,3,10,8,C.greyD);
+  // grey mist overlay
+  ctx.fillStyle='rgba(90,92,100,0.12)';ctx.fillRect(0,0,W,H);
+  // sign: "OLD UNIVERSITY"
+  px(95,68,50,8,C.uniW);px(96,69,48,6,C.uniD);
+  ctx.fillStyle=C.greyL;ctx.font='4px serif';ctx.fillText('OLD UNIVERSITY',98,74);
+}
+
+// Scene 2: François on the windowsill — Princess folding laundry
+function drawS2(){
+  // Grey interior of Old University east wing
+  px(0,0,W,H,C.greyRoomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.greyRoomS);}}
+  // grey stone floor
+  for(var fx=0;fx<W;fx+=16){px(fx,108,15,42,C.greyRoomFloor);px(fx+15,108,1,42,C.greyRoomFloorD);}
+  px(0,108,W,2,'rgba(0,0,0,0.15)');
+  // grey window — the Ghentmoor sky outside
+  px(W-46,8,36,55,'#555558');
+  ctx.save();ctx.beginPath();ctx.rect(W-45,9,34,53);ctx.clip();
+  for(var gy=9;gy<62;gy++){
+    var t=(gy-9)/53;
+    ctx.fillStyle='rgb('+Math.round(85+t*15)+','+Math.round(87+t*15)+','+Math.round(95+t*15)+')';
+    ctx.fillRect(0,gy,W,1);
+  }
+  ctx.restore();
+  px(W-46,8,36,2,'#555558');px(W-46,62,36,2,'#555558');
+  px(W-46,8,2,56,'#555558');px(W-12,8,2,56,'#555558');
+  px(W-29,8,2,56,'#555558');px(W-46,35,36,2,'#555558');
+  // windowsill — where François sits
+  px(W-47,62,38,4,C.uniD);
+  // LAUNDRY TABLE — big pile of Ghenta's laundry
+  px(25,90,130,5,C.woodD);px(22,95,136,18,C.wood);
+  px(22,112,136,3,C.woodD);
+  // pile of laundry on table
+  px(28,68,118,25,C.laundry2);
+  // individual garments (dark witch robes mixed in)
+  px(30,70,30,18,C.witchRobe);px(31,71,28,16,C.witchRobeD);// dark robe
+  px(62,72,25,16,C.laundry1);px(63,73,23,14,C.laundry3);
+  px(90,69,22,19,C.laundry2);px(91,70,20,17,C.laundry1);
+  px(115,73,24,15,C.witchRobe);px(116,74,22,13,C.witchRobeL);
+  // folded stack on side
+  px(148,80,22,12,C.laundry3);px(148,82,22,2,C.witchRobe);px(148,85,22,2,C.laundry1);px(148,88,22,2,C.witchRobe);
+  // dark wall crack (joyless)
+  px(50,20,2,30,'#909090');px(130,35,1,25,'#909090');
+  // torch bracket (no torch — they don't bother)
+  px(20,30,8,4,C.stoneDk);px(20,33,4,8,'#555050');
+  // PRINCESS — standing at laundry table, arms out (holding item up)
+  var px2=90, py=80;
+  // skirt
+  px(px2+2,py+16,14,14,C.pPurp);px(px2,py+19,18,12,C.pPurpD);
+  px(px2+2,py+29,14,1,C.pGold);
+  // torso
+  px(px2+4,py+8,10,9,C.pPurp);px(px2+5,py+9,8,7,C.pPurpL);
+  // arms out — holding laundry item
+  px(px2+1,py+10,4,6,C.pPurp);px(px2+13,py+10,4,6,C.pPurp);
+  px(px2-2,py+10,4,3,C.pSkin);px(px2+16,py+10,4,3,C.pSkin);
+  // laundry item held (dark robe unfolded between hands)
+  px(px2-4,py+10,24,6,C.witchRobe);px(px2-3,py+11,22,4,C.witchRobeL);
+  // neck
+  px(px2+6,py+6,5,2,C.pSkin);
+  // hair
+  px(px2+4,py-2,10,5,C.pHair);px(px2+5,py-2,4,3,C.pHairH);
+  px(px2+3,py+2,2,7,C.pHair);px(px2+13,py+2,2,7,C.pHair);
+  // face — weary but still herself
+  px(px2+4,py+2,10,6,C.pSkin);
+  pt(px2+6,py+4,'#201008');pt(px2+10,py+4,'#201008');
+  px(px2+6,py+6,5,1,C.pSkinS);
+  // crown (she is a princess even here)
+  px(px2+5,py-3,8,2,C.pGold);
+  px(px2+5,py-4,1,2,C.pGold);px(px2+7,py-5,3,3,C.pGold);px(px2+11,py-4,1,2,C.pGold);
+  // FRANÇOIS on windowsill — judging the situation
+  francois(W-38,56);
+  // speech bubble from François
+  px(W-90,35,46,16,'#B0ACA0');px(W-89,36,44,14,'#F0EDE8');
+  px(W-65,51,5,4,'#F0EDE8');px(W-63,50,3,2,'#F0EDE8');
+  ctx.fillStyle='#3A2010';ctx.font='4px serif';ctx.fillText('Mon dieu.',W-86,43);
+  ctx.fillText('Zer is someone?',W-86,50);
+  // grey gloom overlay
+  ctx.fillStyle='rgba(80,82,88,0.07)';ctx.fillRect(0,0,W,H);
+}
+
+// Scene 3: François on the Knight's windowsill — delivering the message
+function drawS3(){
+  // Knight's chambers — warm Antwerpshire interior (contrast to grey Ghentmoor)
+  px(0,0,W,H,C.roomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.roomS);}}
+  // warm floor
+  for(var fx=0;fx<W;fx+=14){px(fx,110,13,40,C.roomFloor);px(fx+13,110,1,40,C.roomFloorD);}
+  px(0,110,W,2,'rgba(0,0,0,0.1)');
+  // window — night sky (he's been pacing for 3 days)
+  px(W-50,12,36,52,'#604010');
+  ctx.save();ctx.beginPath();ctx.rect(W-49,13,34,50);ctx.clip();
+  skyGrad(13,63,12,8,22,30,18,50);
+  ctx.restore();
+  px(W-50,12,36,2,'#604010');px(W-50,63,36,2,'#604010');
+  px(W-50,12,2,52,'#604010');px(W-16,12,2,52,'#604010');
+  px(W-32,12,2,52,'#604010');px(W-50,37,36,2,'#604010');
+  [[W-44,18],[W-28,16],[W-22,26],[W-40,22]].forEach(function(s){pt(s[0],s[1],C.star);});
+  circ(W-26,24,4,C.moonC);circ(W-24,22,3,C.skyNight);
+  // windowsill
+  px(W-51,63,38,4,C.woodD);
+  // desk — maps and notes spread out (he's been researching)
+  px(30,88,80,6,C.woodD);px(28,94,84,18,C.wood);px(28,112,84,3,C.woodD);
+  // maps on desk
+  px(32,82,35,8,'#F5EDD6');px(33,83,33,6,'#E8DCC8');
+  px(35,83,8,1,'#8A7050');px(35,85,15,1,'#8A7050');px(42,83,4,3,'#8A7050');// map lines
+  px(38,82,3,4,'#C83020'); // red mark = Ghentmoor location
+  // second scroll
+  px(68,80,32,10,'#F0E8D4');px(69,81,30,8,'#E4DCC8');
+  px(70,82,6,1,'#8A7050');px(70,84,20,1,'#8A7050');px(70,86,12,1,'#8A7050');
+  // candle burning low (long vigil)
+  px(120,82,4,10,C.stoneL);px(121,83,2,8,'#F8F0E0');
+  circ(122,81,2,C.candle);pt(122,79,C.candleO);
+  ctx.fillStyle='rgba(255,180,60,0.12)';ctx.beginPath();ctx.ellipse(122,88,12,6,0,0,Math.PI*2);ctx.fill();
+  // goblet (he's been at this a while)
+  px(110,84,5,8,C.stoneL);px(111,85,3,6,C.stone);px(109,90,7,1,C.stoneL);
+  // KNIGHT — standing, arms slightly out, surprised at frog
+  var kx=65, ky=86;
+  // boots
+  px(kx+3,ky+21,6,4,C.kSilD);px(kx+10,ky+21,6,4,C.kSilD);
+  px(kx+4,ky+22,4,2,'#707880');px(kx+11,ky+22,4,2,'#707880');
+  // legs
+  px(kx+3,ky+14,6,8,C.kSilver);px(kx+10,ky+14,6,8,C.kSilver);
+  px(kx+4,ky+18,4,3,C.kGold);px(kx+11,ky+18,4,3,C.kGold);
+  // arms out (surprised)
+  px(kx-2,ky+8,4,8,C.kSilver);px(kx+16,ky+8,4,8,C.kSilver);
+  px(kx-2,ky+15,5,3,C.kSilD);px(kx+15,ky+15,5,3,C.kSilD);
+  // torso
+  px(kx+1,ky+8,16,8,C.kSilver);px(kx+4,ky+9,9,6,C.kSilD);
+  px(kx+5,ky+10,6,4,C.kGold);px(kx+6,ky+11,4,2,C.winY);
+  // neck
+  px(kx+6,ky+6,6,3,C.kSkin);
+  // helmet
+  px(kx+3,ky,12,7,C.kSilver);px(kx+4,ky+1,10,5,C.kSilD);
+  px(kx+4,ky+3,10,3,C.kGold);px(kx+5,ky+4,8,1,C.winY);
+  px(kx+2,ky+3,3,5,C.kBlonde);px(kx+13,ky+3,3,5,C.kBlonde);
+  pt(kx+7,ky+5,'#201008');pt(kx+11,ky+5,'#201008');
+  px(kx+8,ky-2,3,2,C.kRed);
+  // FRANÇOIS on windowsill — delivering message with great conviction
+  francois(W-42,57);
+  // speech bubble from François — multiple lines
+  px(100,28,90,32,'#B0ACA0');px(101,29,88,30,'#F0EDE8');
+  px(W-44,58,5,4,'#F0EDE8');px(W-42,57,3,2,'#F0EDE8');
+  ctx.fillStyle='#3A2010';ctx.font='4px serif';
+  ctx.fillText('East wing. Sird floor.',103,36);
+  ctx.fillText('Destroy ze staff.',103,43);
+  ctx.fillText('Ze peasants are simply',103,50);
+  ctx.fillText('unpleasant. Manageable.',103,57);
+  // warm interior glow
+  ctx.fillStyle='rgba(255,200,80,0.05)';ctx.fillRect(0,0,W,H);
+}
+
+// Scene 4: Riding to Ghentmoor — Knight on horseback through grey streets
+function drawS4(){
+  // Grey Ghentmoor sky at dusk
+  for(var gy=0;gy<65;gy++){
+    var t=gy/65;
+    ctx.fillStyle='rgb('+Math.round(55+t*25)+','+Math.round(58+t*22)+','+Math.round(65+t*25)+')';
+    ctx.fillRect(0,gy,W,1);
+  }
+  // grey cobbles
+  cobGrey(0,112,W,38);
+  // Ghentmoor buildings flanking narrow street
+  // left buildings
+  px(0,20,55,100,C.greyW);px(1,21,53,99,C.greyD);
+  for(var sy=22;sy<112;sy+=9){for(var sx=2;sx<54;sx+=18){px(sx,sy,16,8,C.greyL);}}
+  tri(0,20,27,5,54,20,C.greyRoof);
+  px(8,28,10,10,C.greyWin);px(9,29,8,8,C.greyWinD);px(32,28,10,10,C.greyWin);px(33,29,8,8,C.greyWinD);
+  px(8,48,10,10,C.greyWin);px(9,49,8,8,C.greyWinD);px(32,48,10,10,C.greyWin);px(33,49,8,8,C.greyWinD);
+  // right buildings
+  px(185,15,55,100,C.greyL);px(186,16,53,99,C.greyW);
+  for(var sy2=18;sy2<112;sy2+=9){for(var sx2=187;sx2<238;sx2+=18){px(sx2,sy2,16,8,C.greyD);}}
+  tri(185,15,212,0,239,15,C.greyRoof);
+  px(192,25,10,10,C.greyWin);px(193,26,8,8,C.greyWinD);px(218,25,10,10,C.greyWin);px(219,26,8,8,C.greyWinD);
+  px(192,45,10,10,C.greyWin);px(193,46,8,8,C.greyWinD);px(218,45,10,10,C.greyWin);px(219,46,8,8,C.greyWinD);
+  // Old University visible at end of street (distant)
+  px(82,32,76,80,C.uniD);px(84,34,72,78,C.uniW);
+  tri(82,32,120,18,158,32,C.greyRoof);
+  px(100,38,8,10,C.uniWin);px(132,38,8,10,C.uniWin);
+  px(108,34,24,12,C.uniWin);
+  // towers far
+  px(78,22,16,90,C.uniD);px(148,22,16,90,C.uniD);
+  // grey mist settling down the street
+  ctx.fillStyle='rgba(90,92,100,0.14)';ctx.fillRect(60,30,120,90);
+  ctx.fillStyle='rgba(90,92,100,0.06)';ctx.fillRect(0,60,W,60);
+  // HORSE AND KNIGHT — riding, hood up
+  var hx=62, hy=72;
+  horse(hx,hy);
+  // Knight on horse — hood up (incognito), hand on sword
+  var krx=hx+18, kry=hy-14;
+  // cloak over armour
+  px(krx,kry+8,18,20,C.stoneDk);px(krx+1,kry+9,16,18,'#505860');
+  // hood
+  px(krx+2,kry,14,10,C.stoneDk);px(krx+3,kry+1,12,8,'#505860');
+  // face in shadow
+  px(krx+4,kry+2,8,6,'#282018');
+  pt(krx+6,kry+4,'#201008');pt(krx+9,kry+4,'#201008');
+  // gloved hand on sword hilt (right side)
+  px(krx+16,kry+12,4,6,'#303828');px(krx+17,kry+8,3,6,C.kGold);
+  // FRANÇOIS in breast pocket — tiny, head poking out
+  px(krx+4,kry+14,5,4,C.stoneDk);// pocket flap
+  pt(krx+5,kry+13,C.frogG);pt(krx+6,kry+13,C.frogGL);// frog head peeking
+  pt(krx+5,kry+12,C.frogEye);pt(krx+7,kry+12,C.frogEye);
+  // hoofprints on grey cobbles
+  pt(hx+10,112,C.cobGreyLine);pt(hx+22,115,C.cobGreyLine);
+  pt(hx+32,112,C.cobGreyLine);pt(hx+44,115,C.cobGreyLine);
+}
+
+// Scene 5: The confrontation in the great hall
+function drawS5(){
+  // Old University great hall — cold, joyless interior
+  px(0,0,W,H,C.greyRoomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.greyRoomS);}}
+  // grey stone floor
+  for(var fx=0;fx<W;fx+=16){px(fx,108,15,42,C.greyRoomFloor);px(fx+15,108,1,42,C.greyRoomFloorD);}
+  px(0,108,W,2,'rgba(0,0,0,0.15)');
+  // cold torch sconces (barely lit)
+  px(18,20,6,12,C.stoneDk);px(19,21,4,10,C.uniD);
+  circ(21,19,2,'#C08020');pt(21,17,'#D09030');
+  px(216,20,6,12,C.stoneDk);px(217,21,4,10,C.uniD);
+  circ(219,19,2,'#C08020');pt(219,17,'#D09030');
+  // grey windows
+  px(5,5,22,50,'#555558');px(6,6,20,48,C.greyWin);
+  px(6,6,20,2,C.greyWinD);px(6,6,1,48,C.greyWinD);
+  px(213,5,22,50,'#555558');px(214,6,20,48,C.greyWin);
+  px(214,6,20,2,C.greyWinD);px(214,6,1,48,C.greyWinD);
+  // grey banners
+  px(36,5,14,45,'#2A2A3A');px(37,6,12,43,'#3A3A4E');
+  px(38,8,10,4,'#505060');px(38,38,10,4,'#505060');
+  px(190,5,14,45,'#2A2A3A');px(191,6,12,43,'#3A3A4E');
+  px(192,8,10,4,'#505060');px(192,38,10,4,'#505060');
+  // PEASANTS — grey masses, shuffling (3-4 figures, simplified)
+  var peasantC='#707060', peasantD='#505048', peasantSkin='#C0A880';
+  // peasant 1 left
+  px(8,78,10,30,peasantC);px(9,75,8,4,peasantSkin);pt(12,76,'#201008');pt(14,76,'#201008');
+  // peasant 2
+  px(22,80,10,28,peasantD);px(23,77,8,4,peasantSkin);pt(26,78,'#201008');pt(28,78,'#201008');
+  // peasant 3 right
+  px(210,78,10,30,peasantC);px(211,75,8,4,peasantSkin);pt(213,76,'#201008');pt(215,76,'#201008');
+  // peasant 4
+  px(224,80,10,28,peasantD);px(225,77,8,4,peasantSkin);pt(227,78,'#201008');pt(229,78,'#201008');
+  // GHENTA — centre-back, tall and menacing, staff raised
+  var gx=105;
+  ghenta(gx,68);
+  // staff crackling with extra energy (confrontation!)
+  ctx.fillStyle='rgba(128,20,220,0.25)';ctx.beginPath();ctx.ellipse(gx+17,68+7,10,10,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(200,80,255,0.15)';ctx.beginPath();ctx.ellipse(gx+17,68+7,18,18,0,0,Math.PI*2);ctx.fill();
+  // staff lightning bolts
+  ctx.strokeStyle=C.staffGlowL;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(gx+17,68+3);ctx.lineTo(gx+12,68+10);ctx.lineTo(gx+19,68+14);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(gx+17,68+3);ctx.lineTo(gx+22,68+8);ctx.lineTo(gx+16,68+14);ctx.stroke();
+  // PRINCESS — in the hall with tray, eyes meeting Knight
+  princess(168,88);
+  // tray in hands
+  px(162,96,22,3,C.woodD);px(163,97,20,2,C.wood);
+  // small cup on tray
+  circ(172,96,2,C.stoneL);
+  // KNIGHT — sword drawn, cutting through — taller than princess
+  var kx2=44, ky2=76;
+  // boots
+  px(kx2+3,ky2+31,6,5,C.kSilD);px(kx2+11,ky2+31,6,5,C.kSilD);
+  px(kx2+4,ky2+33,4,2,'#707880');px(kx2+12,ky2+33,4,2,'#707880');
+  // legs — longer
+  px(kx2+3,ky2+20,6,12,C.kSilver);px(kx2+11,ky2+20,6,12,C.kSilver);
+  px(kx2+4,ky2+26,4,4,C.kGold);px(kx2+12,ky2+26,4,4,C.kGold);
+  // sword arm forward
+  px(kx2+15,ky2+10,3,10,C.kSilver);px(kx2+17,ky2+10,9,3,C.kSilver);
+  // sword blade
+  px(kx2+24,ky2+8,2,16,C.kSilD);px(kx2+25,ky2+8,1,16,C.kSilver);
+  px(kx2+22,ky2+12,6,2,C.kGold);// crossguard
+  px(kx2+26,ky2+7,2,2,C.kSilver);// tip
+  // torso — extended
+  px(kx2+1,ky2+8,16,13,C.kSilver);px(kx2+4,ky2+9,10,11,C.kSilD);
+  px(kx2+5,ky2+11,7,7,C.kGold);px(kx2+6,ky2+13,5,3,C.winY);
+  // other arm
+  px(kx2,ky2+9,2,10,C.kSilver);
+  // neck
+  px(kx2+6,ky2+6,6,3,C.kSkin);
+  // helmet
+  px(kx2+3,ky2,12,7,C.kSilver);px(kx2+4,ky2+1,10,5,C.kSilD);
+  px(kx2+4,ky2+3,10,3,C.kGold);px(kx2+5,ky2+4,8,1,C.winY);
+  px(kx2+2,ky2+3,3,5,C.kBlonde);px(kx2+13,ky2+3,3,5,C.kBlonde);
+  pt(kx2+7,ky2+5,'#201008');pt(kx2+11,ky2+5,'#201008');
+  px(kx2+8,ky2-2,3,2,C.kRed);
+  // François shouting from breast pocket
+  px(kx2+4,ky2+16,5,3,C.kSilD);
+  pt(kx2+5,ky2+15,C.frogG);pt(kx2+7,ky2+15,C.frogEye);
+  // gloomy ambiance
+  ctx.fillStyle='rgba(60,62,70,0.08)';ctx.fillRect(0,0,W,H);
+}
+
+// Scene 6: The staff breaks — triumphant moment
+function drawS6(){
+  // Same hall — moment of the break
+  px(0,0,W,H,C.greyRoomW);
+  for(var wy=0;wy<H;wy+=8){for(var wx=0;wx<W;wx+=20){px(wx,wy,18,7,C.greyRoomS);}}
+  for(var fx=0;fx<W;fx+=16){px(fx,108,15,42,C.greyRoomFloor);px(fx+15,108,1,42,C.greyRoomFloorD);}
+  px(0,108,W,2,'rgba(0,0,0,0.15)');
+  // cold sconces
+  px(18,20,6,12,C.stoneDk);circ(21,19,2,'#C08020');
+  px(216,20,6,12,C.stoneDk);circ(219,19,2,'#C08020');
+  // grey banners
+  px(36,5,14,45,'#2A2A3A');px(37,6,12,43,'#3A3A4E');
+  px(190,5,14,45,'#2A2A3A');px(191,6,12,43,'#3A3A4E');
+  // GHENTA — now smaller, staff broken, defeated
+  var gx=108;
+  // robe (no hat angle — stunned)
+  px(gx+2,gx-40,14,26,C.witchRobe); // keep her at same pos but note she's x=108
+  // Ghenta drawn properly
+  // robe
+  px(gx+2,76,14,34,C.witchRobe);px(gx+3,77,12,30,C.witchRobeL);
+  px(gx,79,3,28,C.witchRobe);px(gx+15,79,3,28,C.witchRobe);
+  // pointed hat (slightly askew — stunned)
+  px(gx+1,70,16,4,C.witchRobeD);
+  tri(gx+5,56,gx+10,48,gx+15,70,C.witchRobeD);
+  // arms — drooping
+  px(gx,76,3,12,C.witchRobe);px(gx+15,76,3,12,C.witchRobe);
+  px(gx,86,3,3,C.witchSkin);px(gx+15,86,3,3,C.witchSkin);
+  // neck
+  px(gx+6,72,5,4,C.witchSkin);
+  // face — shocked, mouth open
+  px(gx+4,66,10,7,C.witchSkin);
+  pt(gx+6,68,'#201008');pt(gx+10,68,'#201008');
+  px(gx+6,71,4,2,'#805040'); // open mouth
+  px(gx+3,66,2,8,C.witchHair);px(gx+13,66,2,8,C.witchHair);
+  // BROKEN STAFF — two pieces on floor
+  // left half (falling/fallen)
+  ctx.save();ctx.translate(gx+5,102);ctx.rotate(-0.5);
+  px(0,0,2,18,C.staffW);px(1,0,1,18,C.staffD);
+  ctx.restore();
+  // right half
+  ctx.save();ctx.translate(gx+14,100);ctx.rotate(0.4);
+  px(0,0,2,18,C.staffW);px(1,0,1,18,C.staffD);
+  ctx.restore();
+  // fading purple sparks where staff broke
+  ctx.fillStyle='rgba(128,20,220,0.3)';ctx.beginPath();ctx.ellipse(gx+10,96,8,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(200,80,255,0.15)';ctx.beginPath();ctx.ellipse(gx+10,96,15,8,0,0,Math.PI*2);ctx.fill();
+  // fading sparks
+  [[gx+2,90],[gx+18,88],[gx+5,84],[gx+20,92],[gx-2,94],[gx+22,96]].forEach(function(s){
+    circ(s[0],s[1],1,C.staffGlowL);
+  });
+  // PRINCESS — triumphant, standing tall, hands out (just broke it)
+  var px2=60, py=82;
+  px(px2+2,py+16,14,14,C.pPurp);px(px2,py+19,18,12,C.pPurpD);
+  px(px2+2,py+29,14,1,C.pGold);
+  px(px2+4,py+8,10,9,C.pPurp);px(px2+5,py+9,8,7,C.pPurpL);
+  // arms out and down — just finished the action
+  px(px2+1,py+10,4,7,C.pPurp);px(px2+13,py+10,4,7,C.pPurp);
+  px(px2-3,py+14,5,3,C.pSkin);px(px2+16,py+14,5,3,C.pSkin);
+  px(px2+6,py+6,5,2,C.pSkin);
+  px(px2+4,py-2,10,5,C.pHair);px(px2+5,py-2,4,3,C.pHairH);
+  px(px2+3,py+2,2,7,C.pHair);px(px2+13,py+2,2,7,C.pHair);
+  // face — composed, pleasant smile
+  px(px2+4,py+2,10,6,C.pSkin);
+  pt(px2+6,py+4,'#201008');pt(px2+10,py+4,'#201008');
+  px(px2+6,py+6,5,1,C.pSkinS);
+  px(px2+5,py-3,8,2,C.pGold);
+  px(px2+5,py-4,1,2,C.pGold);px(px2+7,py-5,3,3,C.pGold);px(px2+11,py-4,1,2,C.pGold);
+  // KNIGHT — nearby, watching with awe — taller than princess
+  var kx2=155, ky2=78;
+  // boots
+  px(kx2+3,ky2+31,6,5,C.kSilD);px(kx2+11,ky2+31,6,5,C.kSilD);
+  px(kx2+4,ky2+33,4,2,'#707880');px(kx2+12,ky2+33,4,2,'#707880');
+  // legs — longer
+  px(kx2+3,ky2+20,6,12,C.kSilver);px(kx2+11,ky2+20,6,12,C.kSilver);
+  px(kx2+4,ky2+26,4,4,C.kGold);px(kx2+12,ky2+26,4,4,C.kGold);
+  // torso — extended
+  px(kx2+1,ky2+8,16,13,C.kSilver);px(kx2+4,ky2+9,10,11,C.kSilD);
+  px(kx2+5,ky2+11,7,7,C.kGold);px(kx2+6,ky2+13,5,3,C.winY);
+  // arms — wide open in awe
+  px(kx2,ky2+9,2,10,C.kSilver);px(kx2+16,ky2+9,2,10,C.kSilver);
+  px(kx2-2,ky2+14,4,3,C.kSilD);px(kx2+16,ky2+14,4,3,C.kSilD);
+  // neck
+  px(kx2+6,ky2+6,6,3,C.kSkin);
+  // helmet
+  px(kx2+3,ky2,12,7,C.kSilver);px(kx2+4,ky2+1,10,5,C.kSilD);
+  px(kx2+4,ky2+3,10,3,C.kGold);px(kx2+5,ky2+4,8,1,C.winY);
+  px(kx2+2,ky2+3,3,5,C.kBlonde);px(kx2+13,ky2+3,3,5,C.kBlonde);
+  pt(kx2+7,ky2+5,'#201008');pt(kx2+11,ky2+5,'#201008');
+  px(kx2+8,ky2-2,3,2,C.kRed);
+  // peasants shuffling away in background
+  px(10,82,8,28,C.greyD);px(225,82,8,28,C.greyD);
+  px(10,79,6,4,'#909070');px(225,79,6,4,'#909070');
+  // "That was my staff" speech bubble from Ghenta
+  px(128,48,75,16,'#B0ACA0');px(129,49,73,14,'#F0EDE8');
+  px(gx+12,62,4,4,'#F0EDE8');
+  ctx.fillStyle='#3A2010';ctx.font='4px serif';
+  ctx.fillText('"That was my staff."',131,57);
+  ctx.fillStyle=C.pSkinS;ctx.font='4px serif';
+  ctx.fillText('"Yes. It was."',131,63);
+  // slight warm light — something lifting
+  ctx.fillStyle='rgba(255,200,100,0.05)';ctx.fillRect(0,0,W,H);
+}
+
+// Scene 7: Riding home under the stars — warm and triumphant
+function drawS7(){
+  // Beautiful Antwerpshire night — bright stars, warm
+  skyGrad(0,75,12,8,22,25,15,42);
+  // many bright stars
+  [[12,5],[25,8],[40,4],[58,10],[75,6],[92,3],[108,9],[122,5],[138,11],[152,7],
+   [168,4],[182,10],[198,6],[212,3],[228,9],[15,18],[48,14],[88,18],[135,15],[178,18],[218,14]].forEach(function(s){
+    pt(s[0],s[1],C.star);
+  });
+  // bright moon — very bright that night
+  circ(30,16,9,C.moonC);circ(33,14,6,C.skyNight);
+  // warm glow around moon
+  ctx.fillStyle='rgba(255,240,180,0.08)';ctx.beginPath();ctx.ellipse(30,16,18,18,0,0,Math.PI*2);ctx.fill();
+  // road home — warm cobbles of Antwerpshire
+  cobbles(0,112,W,38);
+  // Antwerpshire warm buildings in distance (home)
+  px(0,50,35,80,C.bCream);tri(0,50,17,36,35,50,C.roofR);
+  winLit(5,55,10,8);winLit(20,55,10,8);winLit(5,72,10,8);
+  px(205,45,35,80,C.bTan);tri(205,45,222,30,239,45,C.roofB);
+  winLit(210,52,10,8);winLit(225,52,10,8);
+  // warm glow spilling from windows onto road
+  ctx.fillStyle='rgba(255,200,80,0.1)';ctx.fillRect(0,50,36,80);
+  ctx.fillStyle='rgba(255,200,80,0.08)';ctx.fillRect(204,45,36,80);
+  // lamp posts (warm Antwerpshire)
+  px(52,70,3,45,C.lpost);px(49,70,9,4,C.lpost);px(50,71,7,3,C.lamp);
+  circ(54,68,4,C.lamp);ctx.fillStyle='rgba(255,240,120,0.15)';ctx.beginPath();ctx.ellipse(54,80,14,8,0,0,Math.PI*2);ctx.fill();
+  px(178,70,3,45,C.lpost);px(175,70,9,4,C.lpost);px(176,71,7,3,C.lamp);
+  circ(180,68,4,C.lamp);ctx.fillStyle='rgba(255,240,120,0.15)';ctx.beginPath();ctx.ellipse(180,80,14,8,0,0,Math.PI*2);ctx.fill();
+  // HORSE — trotting home
+  var hx=68, hy=75;
+  horse(hx,hy);
+  // PRINCESS on horse — seated, looking forward, free
+  var prx=hx+16, pry=hy-20;
+  // skirt flowing
+  px(prx+1,pry+14,14,12,C.pPurp);px(prx-1,pry+18,18,10,C.pPurpD);
+  px(prx+1,pry+25,14,1,C.pGold);
+  // torso
+  px(prx+3,pry+7,10,8,C.pPurp);px(prx+4,pry+8,8,6,C.pPurpL);
+  // arms — relaxed
+  px(prx+1,pry+9,3,6,C.pPurp);px(prx+12,pry+9,3,6,C.pPurp);
+  px(prx+3,pry+13,2,2,C.pSkin);px(prx+13,pry+13,2,2,C.pSkin);
+  // neck
+  px(prx+5,pry+5,5,2,C.pSkin);
+  // hair — windswept (riding)
+  px(prx+3,pry,10,5,C.pHair);px(prx+13,pry+1,4,6,C.pHair);// wind-swept right
+  px(prx+2,pry+3,2,7,C.pHair);
+  // face — looking forward, small smile
+  px(prx+3,pry+2,9,5,C.pSkin);
+  pt(prx+5,pry+4,'#201008');pt(prx+9,pry+4,'#201008');
+  px(prx+5,pry+6,4,1,C.pSkinS);
+  // crown
+  px(prx+4,pry-1,8,2,C.pGold);
+  px(prx+4,pry-2,1,2,C.pGold);px(prx+6,pry-3,3,3,C.pGold);px(prx+10,pry-2,1,2,C.pGold);
+  // KNIGHT — riding alongside (second horse implied by position) — taller than princess
+  var kx2=128, ky2=74;
+  // mini-horse silhouette for knight (behind princess)
+  px(kx2+3,ky2+14,28,12,C.horseBD);px(kx2+26,ky2+8,10,10,C.horseBD);
+  px(kx2+33,ky2+6,8,7,C.horseBD);
+  px(kx2+7,ky2+24,3,10,C.horseBD);px(kx2+13,ky2+25,3,9,C.horseBD);
+  px(kx2+18,ky2+24,3,10,C.horseBD);px(kx2+23,ky2+25,3,9,C.horseBD);
+  // knight on second horse — taller: extended torso + longer legs
+  var krx=kx2+9, kry=ky2-10;
+  // legs (longer, draping over horse)
+  px(krx+2,kry+22,5,6,C.kSilver);px(krx+11,kry+22,5,6,C.kSilver);
+  px(krx+3,kry+26,3,3,C.kGold);px(krx+12,kry+26,3,3,C.kGold);
+  // torso — extended height
+  px(krx+1,kry+8,14,15,C.kSilver);px(krx+4,kry+9,9,13,C.kSilD);
+  px(krx+4,kry+11,7,9,C.kGold);px(krx+5,kry+13,5,5,C.winY);
+  // arms relaxed on reins
+  px(krx,kry+11,2,8,C.kSilver);px(krx+14,kry+11,2,8,C.kSilver);
+  px(krx-1,kry+18,3,3,C.kSilD);px(krx+14,kry+18,3,3,C.kSilD);
+  // neck
+  px(krx+5,kry+7,5,2,C.kSkin);
+  // helmet
+  px(krx+2,kry,12,8,C.kSilver);px(krx+3,kry+1,10,6,C.kSilD);
+  px(krx+3,kry+4,10,3,C.kGold);px(krx+4,kry+5,8,1,C.winY);
+  px(krx+1,kry+3,3,5,C.kBlonde);px(krx+11,kry+3,3,5,C.kBlonde);
+  pt(krx+5,kry+5,'#201008');pt(krx+9,kry+5,'#201008');
+  px(krx+5,kry-1,3,2,C.kRed);
+  // FRANÇOIS in breast pocket — satisfied
+  px(krx+4,kry+17,4,3,C.kSilD);
+  pt(krx+5,kry+16,C.frogG);pt(krx+6,kry+16,C.frogG);pt(krx+7,kry+16,C.frogEye);
+  // warm overall glow — home feeling
+  ctx.fillStyle='rgba(255,210,100,0.06)';ctx.fillRect(0,0,W,H);
+  // shooting star across sky
+  ctx.strokeStyle='rgba(255,250,200,0.7)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(155,8);ctx.lineTo(170,14);ctx.stroke();
+  pt(155,8,C.star);
+}
+
+// ---- SCENE REGISTRY ----
+var scenes = [
+  {label:'One morning, the Princess was simply gone',  fn:drawS0, para:0,  paraEnd:5},
+  {label:'The grey city of Ghentmoor',                 fn:drawS1, para:6,  paraEnd:8},
+  {label:'Mon dieu',                                   fn:drawS2, para:9,  paraEnd:26},
+  {label:'François delivers the message',              fn:drawS3, para:27, paraEnd:38},
+  {label:'Riding to Ghentmoor',                        fn:drawS4, para:39, paraEnd:41},
+  {label:'The confrontation',                          fn:drawS5, para:42, paraEnd:51},
+  {label:'That was my staff',                          fn:drawS6, para:52, paraEnd:60},
+  {label:'The ride home, under the stars',             fn:drawS7, para:61, paraEnd:71},
+];
+
+var storyParas = [
+  // 0-4: the Princess is gone
+  'It began, as trouble often does, without much warning.',
+  'One morning the Princess was simply gone.',
+  'No note. No farewell. Just an empty room in the castle and a faint smell of something unpleasant \u2014 like damp stone and old ambition \u2014 that hadn\u2019t been there the night before. The King and Queen were beside themselves. The squires searched the grounds. The Knight, upon hearing the news, felt something cold settle in his chest and immediately began saddling his horse.',
+  'It did not take long to find out what had happened. Word travels fast in Antwerpshire, and the word was this: Ghenta the Grim had come.',
+  'Ghenta the Grim was a witch of considerable power and considerably poor temperament, who resided in the grey and drizzly city of Ghentmoor, two days\u2019 ride to the west. She was known for three things: her powerful staff, which crackled with dark magic at the slightest provocation; her devoted band of peasants, who followed her with the unthinking loyalty of people who had simply never thought to question anything; and her deep, abiding resentment of anyone who seemed to be having a good time.',
+  // 5-11: Ghentmoor and the Old University
+  'The Princess, by all accounts, had been having a very good time indeed. Ghenta had taken exception to this.',
+  'And so the Princess had been taken to Ghentmoor, to the Old University \u2014 a vast, crumbling, thoroughly joyless building in the centre of the city \u2014 where she was now expected to serve Ghenta and her peasants indefinitely. Fetch this. Carry that. No, not like that. Do it again.',
+  'The Princess, it must be said, was not enjoying Ghentmoor.',
+  'The city was grey. The people were grey. Even the sky above it seemed to have given up and gone grey, as if the sun had taken one look at Ghentmoor and decided it had better things to do. The Old University was cold and smelled of cabbage and old grudges, and the peasants regarded her with the blank, slightly suspicious expressions of people who had never encountered anyone with a personality before and weren\u2019t entirely sure what to make of it.',
+  'She had been there for three days when she met Fran\u00e7ois.',
+  'He appeared on the windowsill of the room where she was folding an enormous pile of Ghenta\u2019s laundry \u2014 which was, she felt, an indignity too far \u2014 and he regarded her with the expression of someone who has arrived somewhere and found it considerably beneath his standards.',
+  'He was a frog. Small, green, impeccably self-possessed. He looked at the laundry. He looked at the Princess. He looked back at the laundry.',
+  // 12-22: François meets the Princess
+  '\u201cMon dieu,\u201d he said.',
+  '\u201cHello,\u201d said the Princess.',
+  '\u201cYou are folding the laundry of zis woman?\u201d He said \u2018this woman\u2019 with the particular inflection of someone for whom two words were sufficient to convey an entire essay of contempt. \u201cZis is not acceptable. Zis is not acceptable at all.\u201d',
+  '\u201cI\u2019m aware,\u201d said the Princess.',
+  'Fran\u00e7ois hopped from the windowsill to the top of the laundry pile and surveyed the room with the air of a general assessing a battlefield. \u201cYou \u2019ave someone? Someone who would come for you, if they knew where you were?\u201d',
+  'The Princess thought of the Knight \u2014 of courtyard torches and theatre seats and the particular way he looked at her when he thought she wasn\u2019t paying attention.',
+  '\u201cYes,\u201d she said. \u201cI have someone.\u201d',
+  '\u201cBien.\u201d Fran\u00e7ois drew himself up to his full height, which was not considerable but was delivered with great conviction. \u201cTell me where to find zis person. I will carry ze message. I am, after all, an excellent messenger.\u201d',
+  '\u201cHave you done this before?\u201d',
+  'A pause.',
+  '\u201cZe details are not important,\u201d said Fran\u00e7ois.',
+  // 23-32: François delivers the message to the Knight
+  'The Princess decided, on balance, that an overconfident French frog was still significantly better than no frog at all, and told him where to find the Knight. Fran\u00e7ois listened with great seriousness, repeated the directions back incorrectly twice, corrected himself with considerable dignity, and then hopped back to the windowsill.',
+  '\u201cDo not worry,\u201d he said, pausing dramatically in the frame. \u201cFran\u00e7ois does not fail.\u201d',
+  'He disappeared into the grey Ghentmoor sky.',
+  'The Princess went back to folding the laundry, and allowed herself, for the first time in three days, a small smile.',
+  'The Knight was in the middle of a very bad week when Fran\u00e7ois arrived on his windowsill.',
+  'He had spent three days making enquiries, sending scouts, and pacing the length of his chambers in a manner his squire found deeply exhausting. He had been about to ride to Ghentmoor regardless, without a plan, on the basis that doing something wrong felt better than doing nothing right.',
+  'Then the frog appeared.',
+  '\u201cYou are ze Knight?\u201d said Fran\u00e7ois, looking him up and down with an expression that suggested the Knight had not entirely met expectations.',
+  '\u201cI am,\u201d said the Knight.',
+  '\u201cShe said you were taller,\u201d said Fran\u00e7ois.',
+  // 33-37: riding to Ghentmoor
+  '\u201cShe absolutely did not say that.\u201d',
+  '\u201cNon,\u201d Fran\u00e7ois conceded, with a small wave of one leg. \u201cShe did not. But you should work on your posture regardless. Now. Listen carefully. Ze Princess is held in ze Old University of Ghentmoor, in ze east wing, third floor. Ghenta ze Grim \u2019as \u2019er serving ze peasants. Ze staff is ze source of \u2019er power \u2014 destroy ze staff and ze witch is \u2019armless. Ze peasants, without ze magic to back zem up, are simply \u2014\u201d he paused, searching for the right word \u2014 \u201cunpleasant. Which is manageable.\u201d',
+  'The Knight stared at him. \u201cHow do you know all of this?\u201d',
+  '\u201cI am an excellent observer,\u201d said Fran\u00e7ois. \u201cAlso I \u2019id in ze witch\u2019s hat for approximately forty-five minutes zis morning. It was not comfortable but it was informative.\u201d',
+  'The Knight decided he liked this frog enormously.',
+  // 38-45: the confrontation
+  'He rode for Ghentmoor before the hour was out.',
+  'Ghentmoor was exactly as unpleasant as advertised. The Knight arrived at dusk, when the grey city was at its greyest, and made his way through the winding streets toward the Old University with his hood up and his hand on his sword and Fran\u00e7ois riding in his breast pocket, occasionally offering directional commentary that was about seventy percent accurate.',
+  'The University loomed at the end of a cobbled street like a building that had decided long ago to be as unwelcoming as architecturally possible and had succeeded admirably. The Knight slipped in through a side entrance, dispatched two peasant guards with the minimum of fuss \u2014 they were, as Fran\u00e7ois had predicted, more unpleasant than dangerous \u2014 and found the east wing staircase.',
+  'Third floor. End of the corridor. He could hear Ghenta before he could see her \u2014 a sharp, irritable voice issuing a long list of complaints about the quality of the evening\u2019s service.',
+  'He rounded the corner and there was the great hall of the east wing, lit by cold torches, full of grey-faced peasants \u2014 and there, in the middle of it all, was the Princess, carrying an enormous tray with the expression of someone mentally composing a very long list of grievances.',
+  'Their eyes met across the hall.',
+  'She looked, in order: relieved, delighted, and then immediately focused \u2014 because Ghenta the Grim had turned around.',
+  'The witch was tall and angular, with the kind of face that had settled permanently into dissatisfaction, and she held her staff in one hand like an extension of her own bad mood. It crackled with dark energy at the tip. Her eyes found the Knight and narrowed.',
+  // 46-53: the staff breaks
+  '\u201cA visitor,\u201d she said, with the tone of someone for whom visitors were just another thing to be annoyed about. \u201cHow tedious.\u201d',
+  'What followed was, by any measure, a significant commotion.',
+  'The Knight drew his sword. The peasants surged forward with the enthusiasm of people who had been waiting for something to happen. Fran\u00e7ois, from the breast pocket, shouted instructions in French that were almost certainly unhelpful but were delivered with tremendous conviction. The Knight fought his way through the crowd \u2014 not elegantly, but effectively \u2014 and reached the Princess just as she had set down the tray with considerable purpose.',
+  '\u201cYou came,\u201d she said.',
+  '\u201cObviously,\u201d said the Knight.',
+  'There was no time for more than that, because Ghenta was raising her staff.',
+  'What the witch had not accounted for \u2014 what she could not have accounted for, because it had not yet been established as a pattern \u2014 was that the Princess, when the situation called for it, was considerably faster than she looked.',
+  'Before the staff could discharge so much as a spark, the Princess crossed the distance between them in four quick strides, grabbed the staff with both hands, and brought it down across her knee with a crack that echoed through the entire Old University.',
+  // 54-64: aftermath and riding home
+  'The dark energy at the tip sputtered. Flickered. Went out.',
+  'Ghenta the Grim stared at the two broken halves of her staff. Then at the Princess. Then at the staff again.',
+  '\u201cThat,\u201d she said, in a very small voice, \u201cwas my staff.\u201d',
+  '\u201cYes,\u201d said the Princess pleasantly. \u201cIt was.\u201d',
+  'Without the magic crackling behind her, Ghenta the Grim was revealed to be exactly what she had always been underneath \u2014 a rather tired, rather cold, rather unhappy woman in a grey city who had run out of things to threaten people with. The peasants, sensing the shift, shuffled uncertainly and began, one by one, to find reasons to be somewhere else.',
+  'The Knight looked at the Princess. The Princess looked at the Knight. François, from the breast pocket, looked at both of them.',
+  '\u201cBien,\u201d said François, with great satisfaction. \u201cNow can we please leave zis terrible city.\u201d',
+  'They rode out of Ghentmoor as the last of the evening light disappeared behind the grey horizon, and the Princess did not look back once. Not at the Old University, not at the cheerless streets, not at the city that had kept her for far too long.',
+  'She looked forward, toward the road home, toward Antwerpshire, toward the warm lit windows and the cobbled streets and everything that waited for her there.',
+  'Beside her, the Knight rode in silence for a while. Then, because he could not help it:',
+  '\u201cYou broke the staff over your knee.\u201d',
+  '\u201cI did,\u201d said the Princess.',
+  '\u201cJust like that.\u201d',
+  '\u201cIt wasn\u2019t that dramatic.\u201d',
+  '\u201cIt was extremely dramatic,\u201d said the Knight. \u201cIt was one of the most dramatic things I have ever seen.\u201d',
+  'The Princess considered this. \u201cGood,\u201d she said, and smiled.',
+  'From the breast pocket, Fran\u00e7ois made a sound of deep Parisian contentment.',
+  'They rode home through the dark, and the stars above Antwerpshire were very bright that night, and the Knight thought \u2014 not for the first time, and certainly not for the last \u2014 that he was the luckiest Knight in the entire kingdom.',
+];
+
+window.onload = function(){
+  var textEl = document.getElementById('story-text');
+  for(var pi=0; pi<storyParas.length; pi++){
+    var pel = document.createElement('p');
+    pel.id = 'para'+pi;
+    pel.textContent = storyParas[pi];
+    textEl.appendChild(pel);
+  }
+  var dotsRow = document.getElementById('dots-row');
+  for(var d=0; d<scenes.length; d++){
+    var de = document.createElement('div');
+    de.className = 'dot'+(d===0?' on':'');
+    dotsRow.appendChild(de);
+  }
+  var cur = 0;
+  function render(i){
+    ctx.clearRect(0,0,W,H);
+    scenes[i].fn();
+    document.getElementById('scene-name').textContent = scenes[i].label;
+    document.getElementById('prev').disabled = (i===0);
+    document.getElementById('next').disabled = (i===scenes.length-1);
+    var allDots = document.querySelectorAll('.dot');
+    for(var j=0;j<allDots.length;j++) allDots[j].classList.toggle('on',j===i);
+    var allP = document.querySelectorAll('#story-text p');
+    for(var k=0;k<allP.length;k++) allP[k].classList.remove('hl');
+    for(var h=scenes[i].para;h<=scenes[i].paraEnd;h++){
+      if(allP[h]) allP[h].classList.add('hl');
+    }
+    if(allP[scenes[i].para]) allP[scenes[i].para].scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  document.getElementById('prev').onclick = function(){if(cur>0){cur--;render(cur);}};
+  document.getElementById('next').onclick = function(){if(cur<scenes.length-1){cur++;render(cur);}};
+  sizeCanvas();
+  render(0);
+  window.addEventListener('resize', sizeCanvas);
+};
+</script>
+</body>
+</html>

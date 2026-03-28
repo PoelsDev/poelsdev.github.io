@@ -148,4 +148,4 @@ The Princess considered this. "Good," she said, and smiled.
 
 From the breast pocket, François made a sound of deep Parisian contentment.
 
-They rode home through the dark, and the stars above Antwerpshire were very bright that night, and the Knight thought — not for the first time, and certainly not for the last — that he was the luckiest knight in the entire kingdom.
+They rode home through the dark, and the stars above Antwerpshire were very bright that night, and the Knight thought — not for the first time, and certainly not for the last — that he was the luckiest Knight in the entire kingdom.
